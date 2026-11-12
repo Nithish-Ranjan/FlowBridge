@@ -1,0 +1,15 @@
+{
+  "name": "flowbridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FlowBridge - Distributor Cash Gap Resolution Engine & Retailer Payment Identification",
+  "scripts": {
+    "dev:backend": "pnpm --filter @flowbridge/backend dev",
+    "dev:frontend": "pnpm --filter @flowbridge/frontend dev",
+    "build": "pnpm --filter @flowbridge/shared build && pnpm --filter @flowbridge/backend build && pnpm --filter @flowbridge/frontend build",
+    "db:migrate": "pnpm --filter @flowbridge/backend db:migrate",
+    "db:seed": "pnpm --filter @flowbridge/backend db:seed",
+    "db:verify": "pnpm --filter @flowbridge/backend db:verify",
+    "test": "pnpm --filter @flowbridge/shared test && pnpm --filter @flowbridge/backend test"
+  }
+}
