@@ -647,5 +647,49 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ notes }),
     }),
+
+  // Integrations & Distributor Profile
+  getBusinessProfile: (businessId: string) =>
+    apiFetch<{ profile: any }>(`/business/${businessId}/profile`),
+  updateBusinessProfile: (businessId: string, updates: any) =>
+    apiFetch<{ profile: any }>(`/business/${businessId}/profile`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
+  onboardBusiness: (data: any) =>
+    apiFetch<{ business: any; user: any }>('/business/onboard', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Real Bank SMS Ingestion
+  parseBankSms: (businessId: string, rawSms: string, senderHeader?: string) =>
+    apiFetch<{ parsed: any; candidates: any[]; evidence: any }>(`/business/${businessId}/sms/parse-raw`, {
+      method: 'POST',
+      body: JSON.stringify({ rawSms, senderHeader }),
+    }),
+  getSmsEvidence: (businessId: string) =>
+    apiFetch<{ evidence: any[] }>(`/business/${businessId}/sms/evidence`),
+
+  // Real Email Delivery
+  testEmailSmtp: (data: any) =>
+    apiFetch<{ success: boolean; message: string }>('/integrations/email/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  sendLiveEmail: (data: any) =>
+    apiFetch<{ success: boolean; messageId?: string; error?: string }>('/integrations/email/send', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getEmailQueue: (businessId: string) =>
+    apiFetch<{ queue: any[] }>(`/business/${businessId}/email/queue`),
+
+  // Real WhatsApp Dual Mode
+  sendLiveWhatsApp: (data: any) =>
+    apiFetch<{ mode: 'WEB_HAIL' | 'META_CLOUD_API'; success: boolean; handoffUrl?: string; externalMessageId?: string; error?: string }>('/integrations/whatsapp/send', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 

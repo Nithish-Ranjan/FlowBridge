@@ -7,6 +7,7 @@ import type {
 } from '../api/client';
 import { ClassificationBadge, StatusPill } from './Badge';
 import { CashCurveChart } from './CashCurveChart';
+import { BankSmsIngestion } from './BankSmsIngestion';
 
 interface VerifyViewProps {
   workspace: WorkspacePayload;
@@ -374,6 +375,9 @@ export function VerifyView({
           )}
         </div>
       )}
+
+      {/* Real Indian Bank SMS Transaction Ingestion */}
+      <BankSmsIngestion businessId={workspace.business.id} />
 
       {/* Actual vs Plan Table */}
       <div className="card">

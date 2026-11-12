@@ -6,9 +6,10 @@ interface AuthViewProps {
   onSuccess: (user: any) => void;
   language: LanguageCode;
   onLanguageChange: (lang: LanguageCode) => void;
+  onClose?: () => void;
 }
 
-export function AuthView({ onSuccess, language, onLanguageChange }: AuthViewProps) {
+export function AuthView({ onSuccess, language, onLanguageChange, onClose }: AuthViewProps) {
   const t = translations[language];
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('owner@flowbridge.local');
@@ -79,6 +80,18 @@ export function AuthView({ onSuccess, language, onLanguageChange }: AuthViewProp
           padding: 28,
         }}
       >
+        {onClose && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 10 }}>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={onClose}
+              style={{ fontSize: '0.78rem' }}
+            >
+              ← Back to Home
+            </button>
+          </div>
+        )}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h1 style={{ margin: '0 0 6px', fontSize: '1.8rem', color: 'var(--primary)' }}>
             {t.appName}

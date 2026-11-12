@@ -12,6 +12,7 @@ import { createLedgerRouter } from './ledgerRoutes.js';
 import { createPaymentRouter } from './paymentRoutes.js';
 import { reserveRouter } from './reserveRoutes.js';
 import { createRetailerRouter } from './retailerRoutes.js';
+import { integrationsRouter } from './integrationsRoutes.js';
 
 export function createV1Router(): Router {
   const router = Router();
@@ -35,6 +36,7 @@ export function createV1Router(): Router {
   router.use('/reserve', reserveRouter);
   router.use(creditRouter);
   router.use(automationAndReportRouter);
+  router.use(integrationsRouter);
   router.use(createBusinessRouter());
   router.use(createRetailerRouter());
   router.use(createLedgerRouter());

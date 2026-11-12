@@ -17,6 +17,8 @@ import { AutomationView } from './components/AutomationView';
 import { DailyPlanView } from './components/DailyPlanView';
 import { SmartExitModal } from './components/SmartExitModal';
 import { AuthView } from './components/AuthView';
+import { LandingPage } from './components/LandingPage';
+import { OnboardingModal } from './components/OnboardingModal';
 
 type PageKey =
   | 'overview'
@@ -66,6 +68,8 @@ export function App() {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
   const [language, setLanguage] = useState<LanguageCode>('en');
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
   const [businesses, setBusinesses] = useState<BusinessDTO[]>([]);
   const [selectedBusinessId, setSelectedBusinessId] = useState<string>('');
   const [horizonDays, setHorizonDays] = useState<number>(15);
@@ -239,17 +243,51 @@ export function App() {
     api.logout().catch(() => undefined);
   }
 
-  // If user not signed in and has no session token, show AuthView with 1-click demo login
+  // If user not signed in and has no session token, show Fintech Landing Page
   if (!currentUser && !getStoredSessionToken()) {
+    if (showAuthModal) {
+      return (
+        <AuthView
+          language={language}
+          onLanguageChange={handleLanguageSwitch}
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            setShowAuthModal(false);
+            void loadBusinessesAndDashboard();
+          }}
+        />
+      );
+    }
+
     return (
-      <AuthView
-        language={language}
-        onLanguageChange={handleLanguageSwitch}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-          void loadBusinessesAndDashboard();
-        }}
-      />
+      <>
+        <LandingPage
+          language={language}
+          onLanguageChange={handleLanguageSwitch}
+          onSignInClick={() => setShowAuthModal(true)}
+          onGetStartedClick={() => setShowOnboardingModal(true)}
+          onExploreDemoClick={async () => {
+            try {
+              const res = await api.demoLogin();
+              setStoredSessionToken(res.token);
+              setCurrentUser(res.user);
+              void loadBusinessesAndDashboard();
+            } catch (err) {
+              setShowAuthModal(true);
+            }
+          }}
+        />
+        <OnboardingModal
+          isOpen={showOnboardingModal}
+          onClose={() => setShowOnboardingModal(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            setShowOnboardingModal(false);
+            void loadBusinessesAndDashboard();
+          }}
+        />
+      </>
     );
   }
 
