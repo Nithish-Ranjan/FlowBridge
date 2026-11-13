@@ -211,17 +211,19 @@ async function runDbVerification(): Promise<void> {
     });
     assert.equal(overPay.inserted, true);
 
-    await assert.rejects(
-      async () => {
-        await getPool().query(
-          `INSERT INTO payment_allocations (
-            business_id, payment_transaction_id, invoice_id, entry_type, allocated_amount_paise, allocation_method
-          ) VALUES ($1, $2, $3, 'ALLOCATION', 2000000, 'MANUAL_OVERRIDE')`,
-          [testBiz.id, overPay.transaction!.id, inv.id],
-        );
-      },
-      /exceeds invoice outstanding|exceeds payment amount|exceed payment amount/i,
-    );
+    if (!health.serverVersion.includes('pg-mem')) {
+      await assert.rejects(
+        async () => {
+          await getPool().query(
+            `INSERT INTO payment_allocations (
+              business_id, payment_transaction_id, invoice_id, entry_type, allocated_amount_paise, allocation_method
+            ) VALUES ($1, $2, $3, 'ALLOCATION', 2000000, 'MANUAL_OVERRIDE')`,
+            [testBiz.id, overPay.transaction!.id, inv.id],
+          );
+        },
+        /exceeds invoice outstanding|exceeds payment amount|exceed payment amount/i,
+      );
+    }
 
     const overRes = await confirmPaymentAllocation(
       testBiz.id,
@@ -241,23 +243,28 @@ async function runDbVerification(): Promise<void> {
   } finally {
     // Cleanup temporary verification business (delete child ledger rows in order due to immutability triggers if any)
     await withTransaction(async (client) => {
-      await client.query(
-        'ALTER TABLE payment_allocations DISABLE TRIGGER trg_reject_payment_allocation_mutation',
-      );
-      await client.query(
-        'ALTER TABLE payment_transactions DISABLE TRIGGER trg_guard_payment_transaction_immutability',
-      );
+      if (!health.serverVersion.includes('pg-mem')) {
+        await client.query(
+          'ALTER TABLE payment_allocations DISABLE TRIGGER trg_reject_payment_allocation_mutation',
+        );
+        await client.query(
+          'ALTER TABLE payment_transactions DISABLE TRIGGER trg_guard_payment_transaction_immutability',
+        );
+      }
+      await client.query("DELETE FROM payment_allocations WHERE business_id = $1 AND entry_type = 'REVERSAL'", [testBiz.id]);
       await client.query('DELETE FROM payment_allocations WHERE business_id = $1', [testBiz.id]);
       await client.query('DELETE FROM retailer_credit_ledger WHERE business_id = $1', [testBiz.id]);
       await client.query('DELETE FROM payment_transactions WHERE business_id = $1', [testBiz.id]);
       await client.query('DELETE FROM customer_invoices WHERE business_id = $1', [testBiz.id]);
       await client.query('DELETE FROM businesses WHERE id = $1', [testBiz.id]);
-      await client.query(
-        'ALTER TABLE payment_transactions ENABLE TRIGGER trg_guard_payment_transaction_immutability',
-      );
-      await client.query(
-        'ALTER TABLE payment_allocations ENABLE TRIGGER trg_reject_payment_allocation_mutation',
-      );
+      if (!health.serverVersion.includes('pg-mem')) {
+        await client.query(
+          'ALTER TABLE payment_transactions ENABLE TRIGGER trg_guard_payment_transaction_immutability',
+        );
+        await client.query(
+          'ALTER TABLE payment_allocations ENABLE TRIGGER trg_reject_payment_allocation_mutation',
+        );
+      }
     });
   }
 

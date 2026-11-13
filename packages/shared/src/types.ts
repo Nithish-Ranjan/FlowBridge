@@ -68,6 +68,7 @@ export interface RetailerDTO {
   name: string;
   contactName: string | null;
   phoneMasked: string | null;
+  contactPhone?: string | null;
   email: string | null;
   creditTermsDays: number;
   reliabilityScore: number;
@@ -98,6 +99,7 @@ export interface SupplierDTO {
   name: string;
   contactName: string | null;
   phoneMasked: string | null;
+  contactPhone?: string | null;
   email: string | null;
   maxDeferralDays: number;
   maxDeferralPct: number;

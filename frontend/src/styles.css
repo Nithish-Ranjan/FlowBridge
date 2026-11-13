@@ -1,32 +1,36 @@
 :root {
-  /* Bright, Clean, Premium Fintech Color Palette */
-  --bg: #F5F8FF;
+  /* Warm off-white, dark charcoal, restrained terracotta fintech palette */
+  --bg: #FAF9F6;
   --surface: #FFFFFF;
-  --surface-alt: #F8FAFC;
+  --surface-alt: #F5F4F0;
   --surface-raised: #FFFFFF;
-  --border: #E2E8F0;
-  --border-subtle: #EDF2F7;
-  --border-focus: #93C5FD;
+  --border: #E7E5E4;
+  --border-subtle: #F0EFEB;
+  --border-focus: #C84B31;
   
-  --text: #172554;
-  --text-muted: #64748B;
-  --text-light: #94A3B8;
+  --text: #1C1917;
+  --text-muted: #57534E;
+  --text-light: #78716C;
 
-  --primary: #2563EB;
-  --primary-hover: #1D4ED8;
-  --primary-soft: #EFF6FF;
-  --primary-border: #BFDBFE;
+  --primary: #C84B31;
+  --primary-hover: #B03E26;
+  --primary-soft: #FDF4F2;
+  --primary-border: #F5CAC1;
 
-  --secondary: #0EA5A4;
+  --terracotta: #C84B31;
+  --terracotta-soft: #FDF4F2;
+  --terracotta-border: #F5CAC1;
+
+  --secondary: #0D9488;
   --secondary-soft: #F0FDFA;
-  --teal: #0EA5A4;
+  --teal: #0D9488;
   --teal-soft: #F0FDFA;
 
-  --green: #16A34A;
+  --green: #15803D;
   --green-soft: #F0FDF4;
   --green-border: #BBF7D0;
 
-  --amber: #F59E0B;
+  --amber: #D97706;
   --amber-soft: #FFFBEB;
   --amber-border: #FDE68A;
 
@@ -39,19 +43,19 @@
   --violet-border: #DDD6FE;
 
   --sidebar-w: 240px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
 
   /* Elevation Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 14px -2px rgba(37, 99, 235, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 12px 28px -4px rgba(37, 99, 235, 0.09), 0 4px 10px -2px rgba(0, 0, 0, 0.03);
-  --shadow-floating: 0 20px 40px -8px rgba(37, 99, 235, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.03);
+  --shadow-floating: 0 18px 36px -6px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.04);
 
   /* Legacy aliases */
-  --muted: #64748B;
-  --emerald: #0EA5A4;
+  --muted: #57534E;
+  --emerald: #0D9488;
   --emerald-soft: #F0FDFA;
 }
 

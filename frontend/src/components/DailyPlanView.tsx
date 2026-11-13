@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { formatINR } from '@flowbridge/shared';
 import { api } from '../api/client';
-import { type LanguageCode } from '../i18n/translations';
 
 interface DailyPlanViewProps {
   businessId: string;
-  language: LanguageCode;
 }
 
-export function DailyPlanView({ businessId, language }: DailyPlanViewProps) {
+export function DailyPlanView({ businessId }: DailyPlanViewProps) {
   const [plan, setPlan] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +60,8 @@ export function DailyPlanView({ businessId, language }: DailyPlanViewProps) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.95;
 
-    // Language locale mapping
-    utterance.lang = language === 'kn' ? 'kn-IN' : language === 'hi' ? 'hi-IN' : 'en-IN';
+    // English language locale
+    utterance.lang = 'en-IN';
 
     utterance.onend = () => setIsPlaying(false);
     utterance.onerror = () => setIsPlaying(false);

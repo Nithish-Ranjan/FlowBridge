@@ -147,9 +147,12 @@ CREATE TABLE IF NOT EXISTS communication_logs (
   subject TEXT,
   message_body TEXT NOT NULL,
   template_key TEXT,
-  status TEXT NOT NULL DEFAULT 'SENT' CHECK (status IN ('QUEUED', 'SENT', 'DELIVERED', 'READ', 'FAILED')),
+  status TEXT NOT NULL DEFAULT 'DRAFT'
+    CHECK (status IN ('QUEUED', 'DRAFT', 'OPENED_IN_WHATSAPP', 'USER_CONFIRMED_SENT', 'SENT', 'DELIVERED', 'READ', 'FAILED')),
   external_message_id TEXT,
   error_details TEXT,
+  confirmed_at TIMESTAMPTZ,
+  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

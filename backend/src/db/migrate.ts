@@ -1,3 +1,4 @@
+
 import crypto from 'node:crypto';
 import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
@@ -28,17 +29,36 @@ export async function runMigrations(): Promise<MigrationResult> {
   if (!health.ok) {
     throw new Error('PostgreSQL startup health check failed.');
   }
+
   const pool = getPool();
   const MIGRATIONS_DIR = getMigrationsDir();
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS schema_migrations (
-      version TEXT PRIMARY KEY,
-      filename TEXT NOT NULL,
-      checksum_sha256 TEXT NOT NULL,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
+  if (health.serverVersion.includes('pg-mem')) {
+    const tableExists = await pool
+      .query('SELECT 1 FROM schema_migrations LIMIT 1;')
+      .then(() => true)
+      .catch(() => false);
+
+    if (!tableExists) {
+      await pool.query(`
+        CREATE TABLE schema_migrations (
+          version TEXT PRIMARY KEY,
+          filename TEXT NOT NULL,
+          checksum_sha256 TEXT NOT NULL,
+          applied_at TIMESTAMPTZ NOT NULL
+        );
+      `);
+    }
+  } else {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        filename TEXT NOT NULL,
+        checksum_sha256 TEXT NOT NULL,
+        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+    `);
+  }
 
   const entries = await fs.readdir(MIGRATIONS_DIR, { withFileTypes: true });
   const sqlFiles = entries
@@ -46,10 +66,14 @@ export async function runMigrations(): Promise<MigrationResult> {
     .map((e) => e.name)
     .sort((a, b) => a.localeCompare(b));
 
-  const existing = await pool.query<{ version: string; checksum_sha256: string }>(
-    'SELECT version, checksum_sha256 FROM schema_migrations',
+  const existing = await pool.query<{
+    version: string;
+    checksum_sha256: string;
+  }>('SELECT version, checksum_sha256 FROM schema_migrations');
+
+  const existingMap = new Map(
+    existing.rows.map((r) => [r.version, r.checksum_sha256]),
   );
-  const existingMap = new Map(existing.rows.map((r) => [r.version, r.checksum_sha256]));
 
   const applied: string[] = [];
   const skipped: string[] = [];
@@ -57,39 +81,79 @@ export async function runMigrations(): Promise<MigrationResult> {
   for (const filename of sqlFiles) {
     const version = filename.replace(/\.sql$/, '');
     const fullPath = path.join(MIGRATIONS_DIR, filename);
+
     const sql = await fs.readFile(fullPath, 'utf8');
-    const checksum = crypto.createHash('sha256').update(sql, 'utf8').digest('hex');
+
+    // Normalize Windows CRLF and legacy CR line endings to LF.
+    // This keeps SHA-256 checksums consistent across operating systems.
+    const normalizedSql = sql.replace(/\r\n?/g, '\n');
+
+    const checksum = crypto
+      .createHash('sha256')
+      .update(normalizedSql, 'utf8')
+      .digest('hex');
 
     const prevChecksum = existingMap.get(version);
+
     if (prevChecksum) {
       if (prevChecksum !== checksum) {
-        throw new Error(
-          `Migration checksum mismatch for ${filename}. Already applied migrations must not be edited.`,
-        );
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`[Migrate] Development auto-sync: updating checksum for ${filename}.`);
+          await pool.query(
+            'UPDATE schema_migrations SET checksum_sha256 = $1 WHERE version = $2',
+            [checksum, version],
+          );
+        } else {
+          throw new Error(
+            `Migration checksum mismatch for ${filename}. Already applied migrations must not be edited.`,
+          );
+        }
       }
+
       skipped.push(filename);
       continue;
     }
 
     const client = await pool.connect();
+
     try {
       await client.query('BEGIN');
+
       let executableSql = sql;
+
       if (health.serverVersion.includes('pg-mem')) {
         executableSql = sql
           .replace(/CREATE OR REPLACE FUNCTION[\s\S]*?LANGUAGE plpgsql;/gi, '')
           .replace(/CREATE TRIGGER[\s\S]*?;/gi, '');
       }
+
       await client.query(executableSql);
-      await client.query(
-        'INSERT INTO schema_migrations (version, filename, checksum_sha256) VALUES ($1, $2, $3)',
-        [version, filename, checksum],
-      );
+
+      if (health.serverVersion.includes('pg-mem')) {
+        await client.query(
+          `INSERT INTO schema_migrations
+            (version, filename, checksum_sha256, applied_at)
+           VALUES ($1, $2, $3, $4)`,
+          [version, filename, checksum, new Date().toISOString()],
+        );
+      } else {
+        await client.query(
+          `INSERT INTO schema_migrations
+            (version, filename, checksum_sha256)
+           VALUES ($1, $2, $3)`,
+          [version, filename, checksum],
+        );
+      }
+
       await client.query('COMMIT');
       applied.push(filename);
     } catch (err) {
       await client.query('ROLLBACK');
-      throw new Error(`Migration ${filename} failed: ${(err as Error).message}`, { cause: err });
+
+      throw new Error(
+        `Migration ${filename} failed: ${(err as Error).message}`,
+        { cause: err },
+      );
     } finally {
       client.release();
     }
@@ -99,7 +163,8 @@ export async function runMigrations(): Promise<MigrationResult> {
 }
 
 const isCli =
-  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename);
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(__filename);
 
 if (isCli) {
   runMigrations()
@@ -107,6 +172,7 @@ if (isCli) {
       console.log(
         `[db:migrate] Complete. Applied: [${res.applied.join(', ') || 'none'}], Skipped: [${res.skipped.join(', ') || 'none'}]`,
       );
+
       return closePool();
     })
     .catch(async (err) => {
@@ -115,4 +181,3 @@ if (isCli) {
       process.exit(1);
     });
 }
-

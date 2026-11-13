@@ -5,7 +5,6 @@ import {
   invalidateSession,
   loginUser,
   registerUser,
-  updateUserLanguagePreference,
 } from '../../services/authService.js';
 import { asyncHandler, HttpError } from './helpers.js';
 
@@ -14,7 +13,7 @@ export const authRouter: Router = Router();
 authRouter.post(
   '/register',
   asyncHandler(async (req, res) => {
-    const { email, password, fullName, businessName, languagePreference } = req.body ?? {};
+    const { email, password, fullName, businessName } = req.body ?? {};
     if (!email || !password || !fullName || !businessName) {
       throw new HttpError(400, 'VALIDATION_ERROR', 'email, password, fullName, and businessName are required.');
     }
@@ -23,7 +22,6 @@ authRouter.post(
       password,
       fullName,
       businessName,
-      languagePreference,
     });
     res.status(201).json(result);
   }),
@@ -86,18 +84,5 @@ authRouter.post(
       await invalidateSession(req.sessionToken);
     }
     res.json({ ok: true });
-  }),
-);
-
-authRouter.post(
-  '/preferences',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const { languagePreference } = req.body ?? {};
-    if (languagePreference && ['en', 'hi', 'ta'].includes(languagePreference)) {
-      await updateUserLanguagePreference(req.user!.id, languagePreference);
-      req.user!.languagePreference = languagePreference;
-    }
-    res.json({ ok: true, user: req.user });
   }),
 );

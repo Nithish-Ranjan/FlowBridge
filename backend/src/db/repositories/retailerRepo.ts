@@ -9,6 +9,7 @@ interface RetailerRow {
   name: string;
   contact_name: string | null;
   phone_masked: string | null;
+  contact_phone?: string | null;
   email: string | null;
   credit_terms_days: number;
   reliability_score: number;
@@ -50,10 +51,11 @@ function mapRetailer(row: RetailerRow): RetailerDTO {
     name: row.name,
     contactName: row.contact_name,
     phoneMasked: row.phone_masked,
+    contactPhone: row.contact_phone ?? row.phone_masked ?? null,
     email: row.email,
     creditTermsDays: row.credit_terms_days,
     reliabilityScore: row.reliability_score,
-    unappliedCreditPaise: row.unapplied_credit_paise,
+    unappliedCreditPaise: String(row.unapplied_credit_paise),
     status: row.status,
     notes: row.notes,
     createdAt: row.created_at.toISOString(),
@@ -105,6 +107,7 @@ export async function createRetailer(
     name: string;
     contactName?: string | null;
     phoneMasked?: string | null;
+    contactPhone?: string | null;
     email?: string | null;
     creditTermsDays?: number;
     reliabilityScore?: number;
@@ -112,18 +115,20 @@ export async function createRetailer(
   },
   client?: PoolClient,
 ): Promise<RetailerDTO> {
+  const phone = input.contactPhone ?? input.phoneMasked ?? null;
   const res = await query<RetailerRow>(
     `INSERT INTO retailers (
-      business_id, retailer_code, name, contact_name, phone_masked, email,
+      business_id, retailer_code, name, contact_name, phone_masked, contact_phone, email,
       credit_terms_days, reliability_score, notes
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     RETURNING *`,
     [
       input.businessId,
       input.retailerCode,
       input.name,
       input.contactName ?? null,
-      input.phoneMasked ?? null,
+      input.phoneMasked ?? phone,
+      phone,
       input.email ?? null,
       input.creditTermsDays ?? 30,
       input.reliabilityScore ?? 80,
@@ -198,6 +203,7 @@ export async function updateRetailer(
     name?: string;
     contactName?: string | null;
     phoneMasked?: string | null;
+    contactPhone?: string | null;
     email?: string | null;
     creditTermsDays?: number;
     reliabilityScore?: number;
@@ -208,16 +214,18 @@ export async function updateRetailer(
 ): Promise<RetailerDTO | null> {
   const existing = await getRetailerById(businessId, retailerId, client);
   if (!existing) return null;
+  const newPhone = patch.contactPhone !== undefined ? patch.contactPhone : existing.contactPhone;
   const res = await query<RetailerRow>(
     `UPDATE retailers
         SET name = $3,
             contact_name = $4,
             phone_masked = $5,
-            email = $6,
-            credit_terms_days = $7,
-            reliability_score = $8,
-            status = $9,
-            notes = $10
+            contact_phone = $6,
+            email = $7,
+            credit_terms_days = $8,
+            reliability_score = $9,
+            status = $10,
+            notes = $11
       WHERE id = $1 AND business_id = $2
       RETURNING *`,
     [
@@ -226,6 +234,7 @@ export async function updateRetailer(
       patch.name ?? existing.name,
       patch.contactName !== undefined ? patch.contactName : existing.contactName,
       patch.phoneMasked !== undefined ? patch.phoneMasked : existing.phoneMasked,
+      newPhone,
       patch.email !== undefined ? patch.email : existing.email,
       patch.creditTermsDays ?? existing.creditTermsDays,
       patch.reliabilityScore ?? existing.reliabilityScore,

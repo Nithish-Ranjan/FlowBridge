@@ -13,9 +13,10 @@ export interface CommunicationLogDTO {
   subject: string | null;
   messageBody: string;
   templateKey: string | null;
-  status: 'QUEUED' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
+  status: 'QUEUED' | 'DRAFT' | 'OPENED_IN_WHATSAPP' | 'USER_CONFIRMED_SENT' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
   externalMessageId: string | null;
   errorDetails: string | null;
+  confirmedAt?: string | null;
   createdAt: string;
 }
 
@@ -73,8 +74,8 @@ export async function dispatchMessage(input: {
   const pool = getPool();
   const externalMsgId = `msg-${input.channel.toLowerCase()}-${crypto.randomBytes(8).toString('hex')}`;
 
-  // Deterministic delivery simulation: delivered successfully
-  const status: CommunicationLogDTO['status'] = 'DELIVERED';
+  // Accurate channel status: WhatsApp requires user sending, Email can be delivered via SMTP
+  const status: CommunicationLogDTO['status'] = input.channel === 'WHATSAPP' ? 'SENT' : 'DELIVERED';
 
   const res = await pool.query<any>(
     `INSERT INTO communication_logs (

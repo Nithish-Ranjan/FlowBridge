@@ -19,10 +19,12 @@ import {
   Calendar,
   AlertTriangle,
   ArrowRight,
+  MessageSquare,
 } from 'lucide-react';
 import { formatINR, parsePaise } from '@flowbridge/shared';
 import { api, type WorkspacePayload } from '../api/client';
 import { StatusPill } from './Badge';
+import { WhatsAppMessageModal } from './WhatsAppMessageModal';
 
 interface CommunicationsViewProps {
   workspace: WorkspacePayload;
@@ -62,6 +64,14 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
   const [smtpPass, setSmtpPass] = useState('');
   const [testingSmtp, setTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // WhatsApp Smart Workflow State
+  const [pendingWaConfirm, setPendingWaConfirm] = useState<{
+    logId: string;
+    recipientName: string;
+    recipientPhone: string;
+  } | null>(null);
+  const [showSmartModal, setShowSmartModal] = useState(false);
 
   // All contacts list (retailers + suppliers)
   const contacts = useMemo(() => {
@@ -262,26 +272,51 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
     setError(null);
     setNotice(null);
 
-    const recipientPhone = activeContact.phone?.replace(/X/g, '9') || '+91 98765 43210';
     const recipientEmail = activeContact.email || 'retailer@example.com';
 
     try {
       if (channel === 'WHATSAPP') {
-        const res = await api.sendLiveWhatsApp({
+        const smartTemplate =
+          templateType === 'REMINDER'
+            ? 'UPCOMING_REMINDER'
+            : templateType === 'RECEIPT'
+            ? 'PAYMENT_CONFIRMATION'
+            : templateType === 'COMMITMENT'
+            ? 'COMMITMENT_FOLLOWUP'
+            : 'FRIENDLY_FOLLOWUP';
+
+        const prepRes = await api.prepareWhatsAppMessage({
           businessId,
-          recipientPhone,
-          templateType: templateType as any,
-          customMessage: customBody,
+          retailerId: activeContact.id,
+          templateType: smartTemplate,
           invoiceId: selectedInvoice?.id,
-          mode: 'WEB_HAIL',
+          recipientPhoneOverride: activeContact.phone || undefined,
         });
 
-        if (res.handoffUrl) {
-          window.open(res.handoffUrl, '_blank', 'noopener,noreferrer');
+        if (!prepRes.isValidPhone || !prepRes.normalizedPhone) {
+          throw new Error(
+            prepRes.phoneErrorMessage ||
+              'Invalid contact phone number. Please update the contact phone in the Retailers directory.',
+          );
         }
 
+        await api.trackWhatsAppOpened({
+          businessId,
+          logId: prepRes.logId,
+          updatedMessageText: customBody,
+        });
+
+        const waUrl = `https://wa.me/${prepRes.normalizedPhone}?text=${encodeURIComponent(customBody)}`;
+        window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+        setPendingWaConfirm({
+          logId: prepRes.logId,
+          recipientName: activeContact.name,
+          recipientPhone: prepRes.normalizedPhone,
+        });
+
         setNotice(
-          `WhatsApp dispatch launched for ${activeContact.name} (${recipientPhone}). Transaction logged to audit trail.`,
+          `WhatsApp click-to-chat launched for ${activeContact.name} (+${prepRes.normalizedPhone}). FlowBridge never auto-sends: please verify and press Send in WhatsApp, then click "Confirm Message Sent" below.`,
         );
         loadLogs();
       } else {
@@ -301,6 +336,25 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
         }
         loadLogs();
       }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleConfirmPendingWa() {
+    if (!pendingWaConfirm) return;
+    setBusy(true);
+    try {
+      await api.confirmWhatsAppSent({
+        businessId,
+        logId: pendingWaConfirm.logId,
+        note: `User verified manual dispatch in WhatsApp Web to ${pendingWaConfirm.recipientName} (${pendingWaConfirm.recipientPhone}).`,
+      });
+      setPendingWaConfirm(null);
+      setNotice(`Confirmed! WhatsApp communication logged as sent for ${pendingWaConfirm.recipientName}.`);
+      loadLogs();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -590,6 +644,24 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSmartModal(true)}
+                  className="btn btn-sm"
+                  style={{
+                    background: '#16A34A',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.74rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                  title="Open Smart WhatsApp Preparation Modal"
+                >
+                  <MessageSquare size={13} /> Smart Generator
+                </button>
                 <a
                   href={`https://wa.me/${(activeContact?.phone || '919876543210').replace(/[^0-9]/g, '')}`}
                   target="_blank"
@@ -791,6 +863,54 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
                 </div>
               )}
 
+              {/* Human-Controlled WhatsApp Notice & Confirmation Bar */}
+              {channel === 'WHATSAPP' && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: 6,
+                    background: pendingWaConfirm ? '#FEF3C7' : '#F0FDF4',
+                    border: `1px solid ${pendingWaConfirm ? '#FDE68A' : '#BBF7D0'}`,
+                    marginBottom: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ fontSize: '0.74rem', color: pendingWaConfirm ? '#92400E' : '#166534', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <ShieldCheck size={14} color={pendingWaConfirm ? '#D97706' : '#16A34A'} />
+                    <span>
+                      {pendingWaConfirm
+                        ? `Opened in WhatsApp for ${pendingWaConfirm.recipientName}. Please press Send in WhatsApp, then confirm here:`
+                        : 'Human Control Enforced: FlowBridge prepares messages and validates numbers, but never auto-sends.'}
+                    </span>
+                  </div>
+                  {pendingWaConfirm && (
+                    <button
+                      type="button"
+                      onClick={handleConfirmPendingWa}
+                      disabled={busy}
+                      className="btn btn-sm"
+                      style={{
+                        background: '#16A34A',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.74rem',
+                        padding: '4px 8px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                      }}
+                    >
+                      <CheckCircle size={13} /> Confirm Message Sent
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Message Textarea & Send Button */}
               <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
                 <textarea
@@ -815,7 +935,7 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
                   className="btn btn-primary"
                   style={{
                     height: 60,
-                    padding: '0 18px',
+                    padding: '0 16px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -823,11 +943,12 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
                     gap: 4,
                     background: channel === 'WHATSAPP' ? '#25D366' : '#2563EB',
                     border: 'none',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   <Send size={16} />
                   <span style={{ fontSize: '0.68rem', fontWeight: 700 }}>
-                    {busy ? 'Sending...' : channel === 'WHATSAPP' ? 'Dispatch' : 'Email'}
+                    {busy ? 'Processing...' : channel === 'WHATSAPP' ? 'Open in WhatsApp' : 'Dispatch Email'}
                   </span>
                 </button>
               </div>
@@ -1090,9 +1211,34 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
                       <td>{log.recipient_phone || log.recipient_email}</td>
                       <td>{log.subject || log.message_snippet || 'Invoice / Due Reminder'}</td>
                       <td>
-                        <span style={{ color: '#16A34A', fontWeight: 700 }}>
-                          ✓ {log.delivery_status || 'DELIVERED'}
-                        </span>
+                        {log.channel === 'WHATSAPP' ? (
+                          log.delivery_status === 'USER_CONFIRMED_SENT' ? (
+                            <span style={{ color: '#16A34A', fontWeight: 700 }}>
+                              ✓ User-Confirmed Sent
+                            </span>
+                          ) : log.delivery_status === 'OPENED_IN_WHATSAPP' ? (
+                            <span style={{ color: '#D97706', fontWeight: 700 }}>
+                              ⧗ Opened in WhatsApp
+                            </span>
+                          ) : log.delivery_status === 'DRAFT' ? (
+                            <span style={{ color: '#64748B', fontWeight: 600 }}>
+                              Draft Created
+                            </span>
+                          ) : (
+                            <span style={{ color: '#64748B', fontWeight: 600 }}>
+                              {log.delivery_status || 'DRAFT'}
+                            </span>
+                          )
+                        ) : (
+                          <span
+                            style={{
+                              color: log.delivery_status === 'FAILED' ? '#DC2626' : '#2563EB',
+                              fontWeight: 700,
+                            }}
+                          >
+                            {log.delivery_status || 'SENT'}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1102,6 +1248,17 @@ export function CommunicationsView({ workspace, businessId, initialContactId }: 
           )}
         </div>
       )}
+
+      {/* Smart WhatsApp Message Generation Modal */}
+      <WhatsAppMessageModal
+        isOpen={showSmartModal}
+        onClose={() => setShowSmartModal(false)}
+        businessId={businessId}
+        workspace={workspace}
+        initialRetailerId={activeContact?.id}
+        initialInvoiceId={selectedInvoice?.id}
+        onSuccess={() => loadLogs()}
+      />
     </div>
   );
 }

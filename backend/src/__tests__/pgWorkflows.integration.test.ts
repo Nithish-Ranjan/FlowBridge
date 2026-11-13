@@ -205,11 +205,16 @@ describe('PostgreSQL + /api/v1 End-to-End Integration Workflows', () => {
         await client.query(
           'ALTER TABLE payment_transactions DISABLE TRIGGER trg_guard_payment_transaction_immutability',
         );
+        await client.query("DELETE FROM payment_allocations WHERE business_id = $1 AND entry_type = 'REVERSAL'", [testBusinessId]);
         await client.query('DELETE FROM payment_allocations WHERE business_id = $1', [testBusinessId]);
         await client.query('DELETE FROM commitments WHERE business_id = $1', [testBusinessId]);
         await client.query('DELETE FROM retailer_credit_ledger WHERE business_id = $1', [testBusinessId]);
         await client.query('DELETE FROM payment_transactions WHERE business_id = $1', [testBusinessId]);
         await client.query('DELETE FROM customer_invoices WHERE business_id = $1', [testBusinessId]);
+        await client.query('DELETE FROM supplier_bills WHERE business_id = $1', [testBusinessId]);
+        await client.query('DELETE FROM operating_expenses WHERE business_id = $1', [testBusinessId]);
+        await client.query('DELETE FROM suppliers WHERE business_id = $1', [testBusinessId]);
+        await client.query('DELETE FROM retailers WHERE business_id = $1', [testBusinessId]);
         await client.query('DELETE FROM businesses WHERE id = $1', [testBusinessId]);
         await client.query(
           'ALTER TABLE payment_transactions ENABLE TRIGGER trg_guard_payment_transaction_immutability',

@@ -1,3 +1,4 @@
+
 import type {
   ApprovalLimits,
   BusinessDTO,
@@ -28,7 +29,9 @@ export type {
   CommitmentDTO,
 };
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:4000/api/v1';
+const API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined) ??
+  'http://localhost:4000/api/v1';
 
 export interface WorkspacePayload {
   business: BusinessDTO;
@@ -115,7 +118,12 @@ export interface CommitmentReconciliationResponse {
     dueDate: string;
     expectedAmountPaise: string;
     fulfilledAmountPaise: string;
-    reconciliationStatus: 'MATCHED' | 'PARTIAL' | 'MISSED' | 'UNKNOWN_NEEDS_REVIEW' | 'PENDING_FUTURE';
+    reconciliationStatus:
+      | 'MATCHED'
+      | 'PARTIAL'
+      | 'MISSED'
+      | 'UNKNOWN_NEEDS_REVIEW'
+      | 'PENDING_FUTURE';
     explanation: string;
   }>;
   radar: PromiseRadarReport;
@@ -143,7 +151,10 @@ export interface AllocationPreviewResponse {
       currentOutstandingPaise: string;
       proposedAllocatePaise: string;
       postAllocationOutstandingPaise: string;
-      allocationMethod: 'EXPLICIT_INVOICE' | 'OLDEST_DUE_FIRST' | 'MANUAL_OVERRIDE';
+      allocationMethod:
+        | 'EXPLICIT_INVOICE'
+        | 'OLDEST_DUE_FIRST'
+        | 'MANUAL_OVERRIDE';
     }>;
     totalProposedAllocatePaise: string;
     unappliedOverpaymentPaise: string;
@@ -151,8 +162,47 @@ export interface AllocationPreviewResponse {
   };
 }
 
+// ML payment-delay prediction response.
+export interface PaymentDelayPredictionResponse {
+  retailer: {
+    id: string;
+    retailerCode: string;
+    name: string;
+  };
+  invoice: {
+    invoiceDate: string;
+    dueDate: string;
+    invoiceAmountPaise: string;
+  };
+  prediction: {
+    payment_delay_days: number;
+    interpretation: string;
+    unit: string;
+  };
+  model?: {
+    type: string;
+    status: string;
+    data_type: string;
+  };
+  disclaimer?: string;
+  historySummary: {
+    priorPaidInvoiceCount: number;
+    priorLatePaymentRate: number | null;
+    priorAveragePaymentDelayDays: number | null;
+    priorOnTimeOrEarlyRate: number | null;
+    priorOutstandingInvoiceCount: number;
+    priorOutstandingInvoiceAmountInr: number;
+  };
+}
+
 interface ApiErrorPayload {
-  error?: string | { code?: string; message?: string; details?: Array<{ path?: string; message?: string }> };
+  error?:
+    | string
+    | {
+        code?: string;
+        message?: string;
+        details?: Array<{ path?: string; message?: string }>;
+      };
   details?: Array<{ path?: string; message?: string }>;
 }
 
@@ -171,50 +221,82 @@ export function setStoredSessionToken(token: string | null): void {
     if (token) localStorage.setItem(TOKEN_KEY, token);
     else localStorage.removeItem(TOKEN_KEY);
   } catch {
-    // Ignore storage errors in restricted contexts
+    // Ignore storage errors in restricted contexts.
   }
 }
 
-async function apiFetchRaw<T>(path: string, init?: RequestInit): Promise<{ status: number; ok: boolean; data: T & ApiErrorPayload }> {
+async function apiFetchRaw<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<{ status: number; ok: boolean; data: T & ApiErrorPayload }> {
   const token = getStoredSessionToken();
+
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...((init?.headers as Record<string, string>) ?? {}),
   };
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers,
   });
+
   const data = (await res.json().catch(() => ({}))) as T & ApiErrorPayload;
-  return { status: res.status, ok: res.ok, data };
+
+  return {
+    status: res.status,
+    ok: res.ok,
+    data,
+  };
 }
 
 function formatApiError(status: number, data: ApiErrorPayload): string {
   if (typeof data.error === 'string') {
-    const detailMsg = data.details?.map((d) => `${d.path ?? 'field'}: ${d.message ?? ''}`).join('; ');
+    const detailMsg = data.details
+      ?.map((d) => `${d.path ?? 'field'}: ${d.message ?? ''}`)
+      .join('; ');
+
     return detailMsg ? `${data.error}: ${detailMsg}` : data.error;
   }
+
   if (data.error && typeof data.error === 'object') {
-    const detailsArr = Array.isArray(data.error.details) ? data.error.details : undefined;
-    const detailMsg = detailsArr?.map((d) => `${d.path ?? 'field'}: ${d.message ?? ''}`).join('; ');
+    const detailsArr = Array.isArray(data.error.details)
+      ? data.error.details
+      : undefined;
+
+    const detailMsg = detailsArr
+      ?.map((d) => `${d.path ?? 'field'}: ${d.message ?? ''}`)
+      .join('; ');
+
     const base = data.error.message ?? `HTTP ${status}`;
+
     return detailMsg ? `${base} (${detailMsg})` : base;
   }
+
   return `HTTP ${status}`;
 }
 
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
   const { status, ok, data } = await apiFetchRaw<T>(path, init);
+
   if (!ok) {
     throw new Error(formatApiError(status, data));
   }
+
   return data;
 }
 
 export const api = {
-  health: () => apiFetch<{ ok: boolean; database: string }>('/health'),
-  listBusinesses: () => apiFetch<{ businesses: BusinessDTO[] }>('/businesses'),
+  health: () =>
+    apiFetch<{ ok: boolean; database: string }>('/health'),
+
+  listBusinesses: () =>
+    apiFetch<{ businesses: BusinessDTO[] }>('/businesses'),
+
   createBusiness: (body: {
     code: string;
     name: string;
@@ -222,7 +304,12 @@ export const api = {
     openingCashDate: string;
     minimumCashPaise: string;
     allocationPolicy: BusinessDTO['allocationPolicy'];
-  }) => apiFetch<{ business: BusinessDTO }>('/businesses', { method: 'POST', body: JSON.stringify(body) }),
+  }) =>
+    apiFetch<{ business: BusinessDTO }>('/businesses', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   updateBusinessSettings: (
     businessId: string,
     body: {
@@ -232,29 +319,68 @@ export const api = {
       allocationPolicy?: BusinessDTO['allocationPolicy'];
       approvalLimits?: ApprovalLimits;
     },
-  ) => apiFetch<{ business: BusinessDTO }>(`/business/settings?businessId=${businessId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  ) =>
+    apiFetch<{ business: BusinessDTO }>(
+      `/business/settings?businessId=${businessId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
+
   getDashboard: (businessId: string, horizonDays = 15) =>
-    apiFetch<DashboardResponse>(`/businesses/${businessId}/dashboard?horizonDays=${horizonDays}`),
-  saveForecastSnapshot: (businessId: string, horizonDays: number, saveSnapshotLabel: string) =>
-    apiFetch<{ forecast: ForecastResult }>(`/forecast/recalculate?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ horizonDays, snapshotLabel: saveSnapshotLabel }),
-    }),
-  evaluateScenario: (businessId: string, horizonDays: number, actions: ScenarioActionInput[]) =>
-    apiFetch<{ forecast: ForecastResult }>(`/scenarios/evaluate?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ horizonDays, actions }),
-    }),
+    apiFetch<DashboardResponse>(
+      `/businesses/${businessId}/dashboard?horizonDays=${horizonDays}`,
+    ),
+
+  saveForecastSnapshot: (
+    businessId: string,
+    horizonDays: number,
+    saveSnapshotLabel: string,
+  ) =>
+    apiFetch<{ forecast: ForecastResult }>(
+      `/forecast/recalculate?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          horizonDays,
+          snapshotLabel: saveSnapshotLabel,
+        }),
+      },
+    ),
+
+  evaluateScenario: (
+    businessId: string,
+    horizonDays: number,
+    actions: ScenarioActionInput[],
+  ) =>
+    apiFetch<{ forecast: ForecastResult }>(
+      `/scenarios/evaluate?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ horizonDays, actions }),
+      },
+    ),
+
   saveScenario: (
     businessId: string,
     body: {
       name: string;
       description?: string;
-      scenarioKind: 'BASELINE' | 'RESOLUTION_PLAN' | 'SHOCKWAVE_WHAT_IF' | 'EMERGENCY_FALLBACK';
+      scenarioKind:
+        | 'BASELINE'
+        | 'RESOLUTION_PLAN'
+        | 'SHOCKWAVE_WHAT_IF'
+        | 'EMERGENCY_FALLBACK';
       horizonDays: number;
       actions: ScenarioActionInput[];
     },
-  ) => apiFetch(`/scenarios?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+  ) =>
+    apiFetch(`/scenarios?businessId=${businessId}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   proposeCommitments: (
     businessId: string,
     actions: Array<{
@@ -268,15 +394,25 @@ export const api = {
       proposedAmountPaise: string;
       proposedDate: string;
     }>,
-  ) => apiFetch<{ commitments: CommitmentDTO[] }>(`/commitments?businessId=${businessId}`, {
-    method: 'POST',
-    body: JSON.stringify({ actions }),
-  }),
+  ) =>
+    apiFetch<{ commitments: CommitmentDTO[] }>(
+      `/commitments?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ actions }),
+      },
+    ),
+
   recordCommitmentReply: (
     businessId: string,
     commitmentId: string,
     body: {
-      decision: 'AGREED' | 'CANCELLED' | 'FAILED' | 'COMPLETED' | 'AT_RISK';
+      decision:
+        | 'AGREED'
+        | 'CANCELLED'
+        | 'FAILED'
+        | 'COMPLETED'
+        | 'AT_RISK';
       humanReplyBy: string;
       humanReplyChannel: string;
       humanReplyNotes?: string;
@@ -284,27 +420,42 @@ export const api = {
       agreedDate?: string;
     },
   ) =>
-    apiFetch<{ commitment: CommitmentDTO }>(`/commitments/${commitmentId}/status?businessId=${businessId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        status: body.decision,
-        humanReplyBy: body.humanReplyBy,
-        humanReplyChannel: body.humanReplyChannel,
-        humanReplyNotes: body.humanReplyNotes,
-        agreedAmountPaise: body.agreedAmountPaise,
-        agreedDate: body.agreedDate,
-      }),
-    }),
+    apiFetch<{ commitment: CommitmentDTO }>(
+      `/commitments/${commitmentId}/status?businessId=${businessId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          status: body.decision,
+          humanReplyBy: body.humanReplyBy,
+          humanReplyChannel: body.humanReplyChannel,
+          humanReplyNotes: body.humanReplyNotes,
+          agreedAmountPaise: body.agreedAmountPaise,
+          agreedDate: body.agreedDate,
+        }),
+      },
+    ),
+
   runVerificationRadar: (
     businessId: string,
     horizonDays: number,
-    simulatedDelays: Array<{ invoiceId: string; delayDays: number }>,
+    simulatedDelays: Array<{
+      invoiceId: string;
+      delayDays: number;
+    }>,
     asOfDate?: string,
   ) =>
-    apiFetch<{ verification: VerificationPayload }>(`/risk/promise-failure-radar?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ horizonDays, simulatedDelays, ...(asOfDate ? { asOfDate } : {}) }),
-    }),
+    apiFetch<{ verification: VerificationPayload }>(
+      `/risk/promise-failure-radar?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          horizonDays,
+          simulatedDelays,
+          ...(asOfDate ? { asOfDate } : {}),
+        }),
+      },
+    ),
+
   createRetailer: (
     businessId: string,
     body: {
@@ -312,28 +463,51 @@ export const api = {
       name: string;
       contactName?: string;
       phoneMasked?: string;
+      contactPhone?: string;
       email?: string;
       creditTermsDays?: number;
       reliabilityScore?: number;
       notes?: string;
     },
-  ) => apiFetch<{ retailer: RetailerDTO }>(`/retailers?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
-  getRetailerPaymentHistory: (businessId: string, retailerId: string) =>
+  ) =>
+    apiFetch<{ retailer: RetailerDTO }>(
+      `/retailers?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
+  getRetailerPaymentHistory: (
+    businessId: string,
+    retailerId: string,
+  ) =>
     apiFetch<{
       retailer: RetailerDTO;
       payments: PaymentTransactionDTO[];
       allocations: PaymentAllocationDTO[];
       creditEvents: any[];
-    }>(`/retailers/${retailerId}/payment-history?businessId=${businessId}`),
+    }>(
+      `/retailers/${retailerId}/payment-history?businessId=${businessId}`,
+    ),
+
   registerIdentifier: (
     businessId: string,
     retailerId: string,
-    body: { identifierType: 'UPI_ID' | 'BANK_ACCOUNT'; rawValue: string; displayLabel: string },
+    body: {
+      identifierType: 'UPI_ID' | 'BANK_ACCOUNT';
+      rawValue: string;
+      displayLabel: string;
+    },
   ) =>
-    apiFetch(`/retailers/${retailerId}/payment-identifiers?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    }),
+    apiFetch(
+      `/retailers/${retailerId}/payment-identifiers?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
   recordManualPayment: async (
     businessId: string,
     body: {
@@ -349,58 +523,121 @@ export const api = {
       transactionTimestamp: string;
       valueDate: string;
     },
-  ): Promise<{ inserted: boolean; duplicate: boolean; transaction: PaymentTransactionDTO | null }> => {
-    const { status, ok, data } = await apiFetchRaw<{ transaction?: PaymentTransactionDTO }>(
+  ): Promise<{
+    inserted: boolean;
+    duplicate: boolean;
+    transaction: PaymentTransactionDTO | null;
+  }> => {
+    const { status, ok, data } = await apiFetchRaw<{
+      transaction?: PaymentTransactionDTO;
+    }>(
       `/payments/manual?businessId=${businessId}`,
-      { method: 'POST', body: JSON.stringify(body) },
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
     );
+
     if (status === 409) {
-      return { inserted: false, duplicate: true, transaction: null };
+      return {
+        inserted: false,
+        duplicate: true,
+        transaction: null,
+      };
     }
+
     if (!ok) {
       throw new Error(formatApiError(status, data));
     }
-    return { inserted: true, duplicate: false, transaction: data.transaction ?? null };
+
+    return {
+      inserted: true,
+      duplicate: false,
+      transaction: data.transaction ?? null,
+    };
   },
-  importBankCsv: async (businessId: string, filename: string, csvText: string) => {
+
+  importBankCsv: async (
+    businessId: string,
+    filename: string,
+    csvText: string,
+  ) => {
     const summary = await apiFetch<{
       batchId: string;
       totalRows: number;
       insertedRows: number;
       duplicateRows: number;
       errorRows: number;
-      errors: Array<{ rowNumber: number; message: string }>;
-    }>(`/imports/bank-transactions?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ filename, csvText }),
-    });
+      errors: Array<{
+        rowNumber: number;
+        message: string;
+      }>;
+    }>(
+      `/imports/bank-transactions?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ filename, csvText }),
+      },
+    );
+
     return { summary };
   },
-  manualMatchPayment: (businessId: string, paymentId: string, retailerId: string, note: string) =>
-    apiFetch(`/payments/${paymentId}/resolve-match?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ retailerId, note }),
-    }),
+
+  manualMatchPayment: (
+    businessId: string,
+    paymentId: string,
+    retailerId: string,
+    note: string,
+  ) =>
+    apiFetch(
+      `/payments/${paymentId}/resolve-match?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ retailerId, note }),
+      },
+    ),
+
   previewAllocation: (businessId: string, paymentId: string) =>
-    apiFetch<AllocationPreviewResponse>(`/payments/${paymentId}/allocation-preview?businessId=${businessId}`),
+    apiFetch<AllocationPreviewResponse>(
+      `/payments/${paymentId}/allocation-preview?businessId=${businessId}`,
+    ),
+
   confirmAllocation: (
     businessId: string,
     paymentId: string,
     allocations: Array<{
       invoiceId: string;
       amountPaise: string;
-      allocationMethod: 'EXPLICIT_INVOICE' | 'OLDEST_DUE_FIRST' | 'MANUAL_OVERRIDE';
+      allocationMethod:
+        | 'EXPLICIT_INVOICE'
+        | 'OLDEST_DUE_FIRST'
+        | 'MANUAL_OVERRIDE';
     }>,
   ) =>
-    apiFetch(`/payments/${paymentId}/allocate?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ allocations, creditRemainderAsOverpayment: true }),
-    }),
-  reversePayment: (businessId: string, paymentId: string, reason: string) =>
-    apiFetch(`/payments/${paymentId}/reverse?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
+    apiFetch(
+      `/payments/${paymentId}/allocate?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          allocations,
+          creditRemainderAsOverpayment: true,
+        }),
+      },
+    ),
+
+  reversePayment: (
+    businessId: string,
+    paymentId: string,
+    reason: string,
+  ) =>
+    apiFetch(
+      `/payments/${paymentId}/reverse?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      },
+    ),
+
   createInvoice: (
     businessId: string,
     body: {
@@ -409,18 +646,54 @@ export const api = {
       invoiceDate: string;
       dueDate: string;
       totalAmountPaise: string;
-      evidenceStatus: 'UNCONFIRMED' | 'CONFIRMED_PROMISE' | 'DISPUTED';
+      evidenceStatus:
+        | 'UNCONFIRMED'
+        | 'CONFIRMED_PROMISE'
+        | 'DISPUTED';
     },
-  ) => apiFetch(`/invoices?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+  ) =>
+    apiFetch(
+      `/invoices?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
+  // NEW: Call the FlowBridge ML prediction endpoint.
+  predictPaymentDelay: (
+    businessId: string,
+    body: {
+      retailerId: string;
+      invoiceAmountPaise: string;
+      invoiceDate: string;
+      dueDate: string;
+    },
+  ) =>
+    apiFetch<PaymentDelayPredictionResponse>(
+      `/ml/payment-delay/predict?businessId=${encodeURIComponent(businessId)}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
   updateInvoiceEvidence: (
     businessId: string,
     invoiceId: string,
-    evidenceStatus: 'UNCONFIRMED' | 'CONFIRMED_PROMISE' | 'DISPUTED',
+    evidenceStatus:
+      | 'UNCONFIRMED'
+      | 'CONFIRMED_PROMISE'
+      | 'DISPUTED',
   ) =>
-    apiFetch(`/invoices/${invoiceId}?businessId=${businessId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ evidenceStatus }),
-    }),
+    apiFetch(
+      `/invoices/${invoiceId}?businessId=${businessId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ evidenceStatus }),
+      },
+    ),
+
   createBill: (
     businessId: string,
     body: {
@@ -431,7 +704,15 @@ export const api = {
       totalAmountPaise: string;
       priorityTier: 'ESSENTIAL' | 'NORMAL' | 'FLEXIBLE';
     },
-  ) => apiFetch(`/supplier-bills?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+  ) =>
+    apiFetch(
+      `/supplier-bills?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
   createExpense: (
     businessId: string,
     body: {
@@ -443,9 +724,16 @@ export const api = {
       priorityTier: 'ESSENTIAL' | 'NORMAL' | 'DEFERRABLE';
       isProtected: boolean;
     },
-  ) => apiFetch(`/expenses?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+  ) =>
+    apiFetch(
+      `/expenses?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
 
-  // Dashboard summary (lighter endpoint)
+  // Dashboard summary.
   getDashboardSummary: (businessId: string, horizonDays = 15) =>
     apiFetch<{
       cashTodayPaise: string;
@@ -456,16 +744,48 @@ export const api = {
       unmatchedPaymentCount: number;
       commitmentsAtRiskCount: number;
       business: BusinessDTO;
-      trustCounters: { trustRatioPct: number; actualCount: number; unconfirmedExpectedCount: number; unmatchedOrAmbiguousPayments: number };
-    }>(`/dashboard/summary?businessId=${businessId}&horizonDays=${horizonDays}`),
+      trustCounters: {
+        trustRatioPct: number;
+        actualCount: number;
+        unconfirmedExpectedCount: number;
+        unmatchedOrAmbiguousPayments: number;
+      };
+    }>(
+      `/dashboard/summary?businessId=${businessId}&horizonDays=${horizonDays}`,
+    ),
 
-  // Retailers
+  // Retailers.
   listRetailers: (businessId: string) =>
-    apiFetch<{ retailers: RetailerDTO[] }>(`/retailers?businessId=${businessId}`),
+    apiFetch<{ retailers: RetailerDTO[] }>(
+      `/retailers?businessId=${businessId}`,
+    ),
+
   getRetailer: (businessId: string, retailerId: string) =>
-    apiFetch<{ retailer: RetailerDTO; identifiers: RetailerPaymentIdentifierDTO[] }>(`/retailers/${retailerId}?businessId=${businessId}`),
-  updateRetailer: (businessId: string, retailerId: string, body: { name?: string; contactName?: string; creditTermsDays?: number; status?: string }) =>
-    apiFetch<{ retailer: RetailerDTO }>(`/retailers/${retailerId}?businessId=${businessId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    apiFetch<{
+      retailer: RetailerDTO;
+      identifiers: RetailerPaymentIdentifierDTO[];
+    }>(
+      `/retailers/${retailerId}?businessId=${businessId}`,
+    ),
+
+  updateRetailer: (
+    businessId: string,
+    retailerId: string,
+    body: {
+      name?: string;
+      contactName?: string;
+      creditTermsDays?: number;
+      status?: string;
+    },
+  ) =>
+    apiFetch<{ retailer: RetailerDTO }>(
+      `/retailers/${retailerId}?businessId=${businessId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      },
+    ),
+
   getRetailerLedger: (businessId: string, retailerId: string) =>
     apiFetch<{
       retailer: RetailerDTO;
@@ -475,249 +795,675 @@ export const api = {
       totalCollectedPaise: string;
       outstandingBalancePaise: string;
       unappliedCreditPaise: string;
-    }>(`/retailers/${retailerId}/ledger?businessId=${businessId}`),
-
-  // Invoices
-  listInvoices: (businessId: string) =>
-    apiFetch<{ invoices: CustomerInvoiceDTO[] }>(`/invoices?businessId=${businessId}`),
-  getInvoice: (businessId: string, id: string) =>
-    apiFetch<{ invoice: CustomerInvoiceDTO; allocations: PaymentAllocationDTO[] }>(`/invoices/${id}?businessId=${businessId}`),
-  getChasePriority: (businessId: string, beforeDate?: string) =>
-    apiFetch<{ invoices: Array<{ invoiceId: string; invoiceNumber: string; retailerName: string; dueDate: string; outstandingPaise: string; evidenceStatus: string; rationale: string }> }>(
-      `/invoices/chase-priority?businessId=${businessId}${beforeDate ? '&beforeDate=' + beforeDate : ''}`
+    }>(
+      `/retailers/${retailerId}/ledger?businessId=${businessId}`,
     ),
 
-  // Suppliers
+  // Invoices.
+  listInvoices: (businessId: string) =>
+    apiFetch<{ invoices: CustomerInvoiceDTO[] }>(
+      `/invoices?businessId=${businessId}`,
+    ),
+
+  getInvoice: (businessId: string, id: string) =>
+    apiFetch<{
+      invoice: CustomerInvoiceDTO;
+      allocations: PaymentAllocationDTO[];
+    }>(
+      `/invoices/${id}?businessId=${businessId}`,
+    ),
+
+  getChasePriority: (businessId: string, beforeDate?: string) =>
+    apiFetch<{
+      invoices: Array<{
+        invoiceId: string;
+        invoiceNumber: string;
+        retailerName: string;
+        dueDate: string;
+        outstandingPaise: string;
+        evidenceStatus: string;
+        rationale: string;
+      }>;
+    }>(
+      `/invoices/chase-priority?businessId=${businessId}${
+        beforeDate ? '&beforeDate=' + beforeDate : ''
+      }`,
+    ),
+
+  // Suppliers.
   listSuppliers: (businessId: string) =>
-    apiFetch<{ suppliers: SupplierDTO[] }>(`/suppliers?businessId=${businessId}`),
-  createSupplier: (businessId: string, body: { supplierCode: string; name: string; contactName?: string; paymentTermsDays?: number }) =>
-    apiFetch<{ supplier: SupplierDTO }>(`/suppliers?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+    apiFetch<{ suppliers: SupplierDTO[] }>(
+      `/suppliers?businessId=${businessId}`,
+    ),
 
-  // Bills & Expenses
+  createSupplier: (
+    businessId: string,
+    body: {
+      supplierCode: string;
+      name: string;
+      contactName?: string;
+      paymentTermsDays?: number;
+    },
+  ) =>
+    apiFetch<{ supplier: SupplierDTO }>(
+      `/suppliers?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
+
+  // Bills & Expenses.
   listBills: (businessId: string) =>
-    apiFetch<{ bills: SupplierBillDTO[] }>(`/supplier-bills?businessId=${businessId}`),
+    apiFetch<{ bills: SupplierBillDTO[] }>(
+      `/supplier-bills?businessId=${businessId}`,
+    ),
+
   listExpenses: (businessId: string) =>
-    apiFetch<{ expenses: OperatingExpenseDTO[] }>(`/expenses?businessId=${businessId}`),
+    apiFetch<{ expenses: OperatingExpenseDTO[] }>(
+      `/expenses?businessId=${businessId}`,
+    ),
 
-  // Payments
-  listPayments: (businessId: string, filters?: { matchStatus?: string; allocationStatus?: string }) => {
+  // Payments.
+  listPayments: (
+    businessId: string,
+    filters?: {
+      matchStatus?: string;
+      allocationStatus?: string;
+    },
+  ) => {
     const qs = new URLSearchParams({ businessId });
-    if (filters?.matchStatus) qs.set('matchStatus', filters.matchStatus);
-    if (filters?.allocationStatus) qs.set('allocationStatus', filters.allocationStatus);
-    return apiFetch<{ payments: PaymentTransactionDTO[] }>(`/payments?${qs.toString()}`);
+
+    if (filters?.matchStatus) {
+      qs.set('matchStatus', filters.matchStatus);
+    }
+
+    if (filters?.allocationStatus) {
+      qs.set('allocationStatus', filters.allocationStatus);
+    }
+
+    return apiFetch<{ payments: PaymentTransactionDTO[] }>(
+      `/payments?${qs.toString()}`,
+    );
   },
+
   getMatchQueue: (businessId: string) =>
-    apiFetch<{ queue: PaymentTransactionDTO[]; total: number }>(`/payments/match-queue?businessId=${businessId}`),
+    apiFetch<{
+      queue: PaymentTransactionDTO[];
+      total: number;
+    }>(
+      `/payments/match-queue?businessId=${businessId}`,
+    ),
+
   getPayment: (businessId: string, paymentId: string) =>
-    apiFetch<{ payment: PaymentTransactionDTO; allocations: PaymentAllocationDTO[]; allocationPreview?: AllocationPreviewResponse['preview'] }>(`/payments/${paymentId}?businessId=${businessId}`),
+    apiFetch<{
+      payment: PaymentTransactionDTO;
+      allocations: PaymentAllocationDTO[];
+      allocationPreview?: AllocationPreviewResponse['preview'];
+    }>(
+      `/payments/${paymentId}?businessId=${businessId}`,
+    ),
 
-  // Resolution
+  // Resolution.
   runResolution: (businessId: string, horizonDays = 15) =>
-    apiFetch<{ resolution: ResolutionSearchResult }>(`/resolution/run?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ horizonDays }),
-    }),
-  updateResolutionLimits: (businessId: string, limits: ApprovalLimits) =>
-    apiFetch<{ business: BusinessDTO }>(`/resolution/limits?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify(limits),
-    }),
+    apiFetch<{ resolution: ResolutionSearchResult }>(
+      `/resolution/run?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ horizonDays }),
+      },
+    ),
 
-  // Scenarios
+  updateResolutionLimits: (
+    businessId: string,
+    limits: ApprovalLimits,
+  ) =>
+    apiFetch<{ business: BusinessDTO }>(
+      `/resolution/limits?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(limits),
+      },
+    ),
+
+  // Scenarios.
   listScenarios: (businessId: string) =>
-    apiFetch<{ scenarios: Array<{ id: string; name: string; description: string | null; scenarioKind: string; asOfDate: string; horizonDays: number; isFeasible: boolean | null; actions: ScenarioActionInput[] }> }>(`/scenarios?businessId=${businessId}`),
+    apiFetch<{
+      scenarios: Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        scenarioKind: string;
+        asOfDate: string;
+        horizonDays: number;
+        isFeasible: boolean | null;
+        actions: ScenarioActionInput[];
+      }>;
+    }>(
+      `/scenarios?businessId=${businessId}`,
+    ),
+
   runScenario: (businessId: string, scenarioId: string) =>
-    apiFetch<{ scenario: unknown; forecast: ForecastResult }>(`/scenarios/${scenarioId}/run?businessId=${businessId}`, { method: 'POST' }),
+    apiFetch<{
+      scenario: unknown;
+      forecast: ForecastResult;
+    }>(
+      `/scenarios/${scenarioId}/run?businessId=${businessId}`,
+      {
+        method: 'POST',
+      },
+    ),
 
-  // Commitments
+  // Commitments.
   listCommitments: (businessId: string) =>
-    apiFetch<{ commitments: CommitmentDTO[] }>(`/commitments?businessId=${businessId}`),
+    apiFetch<{ commitments: CommitmentDTO[] }>(
+      `/commitments?businessId=${businessId}`,
+    ),
 
-  // Risk / Verification
+  // Risk / Verification.
   getVerificationRadar: (businessId: string) =>
-    apiFetch<{ verification: VerificationPayload }>(`/risk/promise-failure-radar?businessId=${businessId}`),
+    apiFetch<{ verification: VerificationPayload }>(
+      `/risk/promise-failure-radar?businessId=${businessId}`,
+    ),
+
   reconcileCommitments: (
     businessId: string,
-    options?: { asOfDate?: string; assumeBankDataComplete?: boolean },
+    options?: {
+      asOfDate?: string;
+      assumeBankDataComplete?: boolean;
+    },
   ) =>
-    apiFetch<CommitmentReconciliationResponse>(`/verification/reconcile?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify(options ?? {}),
-    }),
+    apiFetch<CommitmentReconciliationResponse>(
+      `/verification/reconcile?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(options ?? {}),
+      },
+    ),
 
-  // Forecast
+  // Forecast.
   getForecast: (businessId: string, horizonDays = 15) =>
-    apiFetch<{ forecast: ForecastResult; dataQualityWarnings: string[] }>(`/forecast?businessId=${businessId}&horizonDays=${horizonDays}`),
-  recalculateForecast: (businessId: string, horizonDays: number, snapshotLabel?: string) =>
-    apiFetch<{ forecast: ForecastResult }>(`/forecast/recalculate?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ horizonDays, snapshotLabel }),
-    }),
+    apiFetch<{
+      forecast: ForecastResult;
+      dataQualityWarnings: string[];
+    }>(
+      `/forecast?businessId=${businessId}&horizonDays=${horizonDays}`,
+    ),
 
-  // Auth
-  login: (input: { email: string; password: string }) =>
-    apiFetch<{ token: string; user: any; expiresAt: string }>('/auth/login', {
+  recalculateForecast: (
+    businessId: string,
+    horizonDays: number,
+    snapshotLabel?: string,
+  ) =>
+    apiFetch<{ forecast: ForecastResult }>(
+      `/forecast/recalculate?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ horizonDays, snapshotLabel }),
+      },
+    ),
+
+  // Auth.
+  login: (input: {
+    email: string;
+    password: string;
+  }) =>
+    apiFetch<{
+      token: string;
+      user: any;
+      expiresAt: string;
+    }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
+
   demoLogin: () =>
-    apiFetch<{ token: string; user: any; expiresAt: string }>('/auth/demo-login', {
+    apiFetch<{
+      token: string;
+      user: any;
+      expiresAt: string;
+    }>('/auth/demo-login', {
       method: 'POST',
     }),
-  register: (input: { email: string; password: string; fullName: string; businessName: string; languagePreference?: string }) =>
-    apiFetch<{ token: string; user: any; expiresAt: string }>('/auth/register', {
+
+  register: (input: {
+    email: string;
+    password: string;
+    fullName: string;
+    businessName: string;
+  }) =>
+    apiFetch<{
+      token: string;
+      user: any;
+      expiresAt: string;
+    }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(input),
     }),
-  getMe: () => apiFetch<{ user: any }>('/auth/me'),
-  logout: () => apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
-  updatePreferences: (languagePreference: string) =>
-    apiFetch<{ ok: boolean; user: any }>('/auth/preferences', {
+
+  getMe: () =>
+    apiFetch<{ user: any }>('/auth/me'),
+
+  logout: () =>
+    apiFetch<{ ok: boolean }>('/auth/logout', {
       method: 'POST',
-      body: JSON.stringify({ languagePreference }),
     }),
 
-  // Emergency Reserve
+  // Emergency Reserve.
   getReserveStatus: (businessId: string) =>
-    apiFetch<{ reserve: any; recentMovements: any[] }>(`/reserve?businessId=${businessId}`),
-  depositToReserve: (businessId: string, amountPaise: string, reason?: string) =>
-    apiFetch<any>(`/reserve/deposit?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ amountPaise, reason }),
-    }),
-  withdrawFromReserve: (businessId: string, amountPaise: string, reason: string) =>
-    apiFetch<any>(`/reserve/withdraw?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ amountPaise, reason }),
-    }),
-  updateReserveSettings: (businessId: string, targetReservePaise: string, minimumThresholdPaise: string) =>
-    apiFetch<any>(`/reserve/settings?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ targetReservePaise, minimumThresholdPaise }),
-    }),
+    apiFetch<{
+      reserve: any;
+      recentMovements: any[];
+    }>(
+      `/reserve?businessId=${businessId}`,
+    ),
 
-  // Credit Agreements
+  depositToReserve: (
+    businessId: string,
+    amountPaise: string,
+    reason?: string,
+  ) =>
+    apiFetch<any>(
+      `/reserve/deposit?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ amountPaise, reason }),
+      },
+    ),
+
+  withdrawFromReserve: (
+    businessId: string,
+    amountPaise: string,
+    reason: string,
+  ) =>
+    apiFetch<any>(
+      `/reserve/withdraw?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ amountPaise, reason }),
+      },
+    ),
+
+  updateReserveSettings: (
+    businessId: string,
+    targetReservePaise: string,
+    minimumThresholdPaise: string,
+  ) =>
+    apiFetch<any>(
+      `/reserve/settings?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          targetReservePaise,
+          minimumThresholdPaise,
+        }),
+      },
+    ),
+
+  // Credit Agreements.
   listCreditAgreements: (businessId: string) =>
-    apiFetch<any[]>(`/credit-agreements?businessId=${businessId}`),
-  createCreditAgreement: (businessId: string, payload: any) =>
-    apiFetch<any>(`/credit-agreements?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  checkCreditSale: (businessId: string, retailerId: string, requestedSalePaise: string) =>
-    apiFetch<any>(`/credit-agreements/check-sale?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ retailerId, requestedSalePaise }),
-    }),
+    apiFetch<any[]>(
+      `/credit-agreements?businessId=${businessId}`,
+    ),
 
-  // Payment Negotiations
+  createCreditAgreement: (
+    businessId: string,
+    payload: any,
+  ) =>
+    apiFetch<any>(
+      `/credit-agreements?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  checkCreditSale: (
+    businessId: string,
+    retailerId: string,
+    requestedSalePaise: string,
+  ) =>
+    apiFetch<any>(
+      `/credit-agreements/check-sale?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ retailerId, requestedSalePaise }),
+      },
+    ),
+
+  // Payment Negotiations.
   listNegotiations: (businessId: string) =>
-    apiFetch<any[]>(`/negotiations?businessId=${businessId}`),
-  proposeNegotiation: (businessId: string, payload: any) =>
-    apiFetch<any>(`/negotiations/propose?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  counterOfferNegotiation: (businessId: string, negotiationId: string, counterOfferAmountPaise: string, counterOfferDueDate: string, messageText?: string) =>
-    apiFetch<any>(`/negotiations/${negotiationId}/counter?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ counterOfferAmountPaise, counterOfferDueDate, messageText }),
-    }),
-  acceptNegotiation: (businessId: string, negotiationId: string) =>
-    apiFetch<any>(`/negotiations/${negotiationId}/accept?businessId=${businessId}`, {
-      method: 'POST',
-    }),
-  rejectNegotiation: (businessId: string, negotiationId: string, reason?: string) =>
-    apiFetch<any>(`/negotiations/${negotiationId}/reject?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ reason }),
-    }),
+    apiFetch<any[]>(
+      `/negotiations?businessId=${businessId}`,
+    ),
 
-  // Retailer Risk Profiles
+  proposeNegotiation: (
+    businessId: string,
+    payload: any,
+  ) =>
+    apiFetch<any>(
+      `/negotiations/propose?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+    ),
+
+  counterOfferNegotiation: (
+    businessId: string,
+    negotiationId: string,
+    counterOfferAmountPaise: string,
+    counterOfferDueDate: string,
+    messageText?: string,
+  ) =>
+    apiFetch<any>(
+      `/negotiations/${negotiationId}/counter?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          counterOfferAmountPaise,
+          counterOfferDueDate,
+          messageText,
+        }),
+      },
+    ),
+
+  acceptNegotiation: (
+    businessId: string,
+    negotiationId: string,
+  ) =>
+    apiFetch<any>(
+      `/negotiations/${negotiationId}/accept?businessId=${businessId}`,
+      {
+        method: 'POST',
+      },
+    ),
+
+  rejectNegotiation: (
+    businessId: string,
+    negotiationId: string,
+    reason?: string,
+  ) =>
+    apiFetch<any>(
+      `/negotiations/${negotiationId}/reject?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      },
+    ),
+
+  // Retailer Risk Profiles.
   getRetailerRiskProfiles: (businessId: string) =>
-    apiFetch<any[]>(`/retailers/risk-profiles?businessId=${businessId}`),
+    apiFetch<any[]>(
+      `/retailers/risk-profiles?businessId=${businessId}`,
+    ),
 
-  // Communications
+  // Communications.
   getCommunicationLogs: (businessId: string) =>
-    apiFetch<any[]>(`/communications/logs?businessId=${businessId}`),
-  sendInvoiceEmail: (businessId: string, invoiceId: string) =>
-    apiFetch<any>(`/communications/send-invoice?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ invoiceId, channel: 'EMAIL' }),
-    }),
-  sendInvoiceWhatsApp: (businessId: string, invoiceId: string) =>
-    apiFetch<any>(`/communications/send-invoice?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ invoiceId, channel: 'WHATSAPP' }),
-    }),
-  sendPaymentReceipt: (businessId: string, paymentId: string, channel: 'EMAIL' | 'WHATSAPP' = 'WHATSAPP') =>
-    apiFetch<any>(`/communications/send-receipt?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ paymentId, channel }),
-    }),
+    apiFetch<any[]>(
+      `/communications/logs?businessId=${businessId}`,
+    ),
 
-  // Daily Plan Report
+  sendInvoiceEmail: (
+    businessId: string,
+    invoiceId: string,
+  ) =>
+    apiFetch<any>(
+      `/communications/send-invoice?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          invoiceId,
+          channel: 'EMAIL',
+        }),
+      },
+    ),
+
+  sendInvoiceWhatsApp: (
+    businessId: string,
+    invoiceId: string,
+  ) =>
+    apiFetch<any>(
+      `/communications/send-invoice?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          invoiceId,
+          channel: 'WHATSAPP',
+        }),
+      },
+    ),
+
+  sendPaymentReceipt: (
+    businessId: string,
+    paymentId: string,
+    channel: 'EMAIL' | 'WHATSAPP' = 'WHATSAPP',
+  ) =>
+    apiFetch<any>(
+      `/communications/send-receipt?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ paymentId, channel }),
+      },
+    ),
+
+  // Daily Plan Report.
   getDailyPlanReport: (businessId: string) =>
-    apiFetch<any>(`/reports/daily-plan?businessId=${businessId}`),
+    apiFetch<any>(
+      `/reports/daily-plan?businessId=${businessId}`,
+    ),
 
-  // Automation
+  // Automation.
   getAutomationRules: (businessId: string) =>
-    apiFetch<any[]>(`/automation/rules?businessId=${businessId}`),
+    apiFetch<any[]>(
+      `/automation/rules?businessId=${businessId}`,
+    ),
+
   getAutomationQueue: (businessId: string) =>
-    apiFetch<any[]>(`/automation/queue?businessId=${businessId}`),
-  approveAutomationQueueItem: (businessId: string, queueId: string, notes?: string) =>
-    apiFetch<any>(`/automation/queue/${queueId}/approve?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ notes }),
-    }),
-  rejectAutomationQueueItem: (businessId: string, queueId: string, notes?: string) =>
-    apiFetch<any>(`/automation/queue/${queueId}/reject?businessId=${businessId}`, {
-      method: 'POST',
-      body: JSON.stringify({ notes }),
-    }),
+    apiFetch<any[]>(
+      `/automation/queue?businessId=${businessId}`,
+    ),
 
-  // Integrations & Distributor Profile
+  approveAutomationQueueItem: (
+    businessId: string,
+    queueId: string,
+    notes?: string,
+  ) =>
+    apiFetch<any>(
+      `/automation/queue/${queueId}/approve?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      },
+    ),
+
+  rejectAutomationQueueItem: (
+    businessId: string,
+    queueId: string,
+    notes?: string,
+  ) =>
+    apiFetch<any>(
+      `/automation/queue/${queueId}/reject?businessId=${businessId}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      },
+    ),
+
+  // Integrations & Distributor Profile.
   getBusinessProfile: (businessId: string) =>
-    apiFetch<{ profile: any }>(`/business/${businessId}/profile`),
-  updateBusinessProfile: (businessId: string, updates: any) =>
-    apiFetch<{ profile: any }>(`/business/${businessId}/profile`, {
-      method: 'PATCH',
-      body: JSON.stringify(updates),
-    }),
+    apiFetch<{ profile: any }>(
+      `/business/${businessId}/profile`,
+    ),
+
+  updateBusinessProfile: (
+    businessId: string,
+    updates: any,
+  ) =>
+    apiFetch<{ profile: any }>(
+      `/business/${businessId}/profile`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      },
+    ),
+
   onboardBusiness: (data: any) =>
-    apiFetch<{ business: any; user: any }>('/business/onboard', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    apiFetch<{ business: any; user: any }>(
+      '/business/onboard',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
 
-  // Real Bank SMS Ingestion
-  parseBankSms: (businessId: string, rawSms: string, senderHeader?: string) =>
-    apiFetch<{ parsed: any; candidates: any[]; evidence: any }>(`/business/${businessId}/sms/parse-raw`, {
-      method: 'POST',
-      body: JSON.stringify({ rawSms, senderHeader }),
-    }),
+  // Real Bank SMS Ingestion.
+  parseBankSms: (
+    businessId: string,
+    rawSms: string,
+    senderHeader?: string,
+  ) =>
+    apiFetch<{
+      parsed: any;
+      candidates: any[];
+      evidence: any;
+    }>(
+      `/business/${businessId}/sms/parse-raw`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rawSms, senderHeader }),
+      },
+    ),
+
   getSmsEvidence: (businessId: string) =>
-    apiFetch<{ evidence: any[] }>(`/business/${businessId}/sms/evidence`),
+    apiFetch<{ evidence: any[] }>(
+      `/business/${businessId}/sms/evidence`,
+    ),
 
-  // Real Email Delivery
+  // Real Email Delivery.
   testEmailSmtp: (data: any) =>
-    apiFetch<{ success: boolean; message: string }>('/integrations/email/test', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    apiFetch<{
+      success: boolean;
+      message: string;
+    }>(
+      '/integrations/email/test',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
+
   sendLiveEmail: (data: any) =>
-    apiFetch<{ success: boolean; messageId?: string; error?: string }>('/integrations/email/send', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
+    apiFetch<{
+      success: boolean;
+      messageId?: string;
+      error?: string;
+    }>(
+      '/integrations/email/send',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
+
   getEmailQueue: (businessId: string) =>
-    apiFetch<{ queue: any[] }>(`/business/${businessId}/email/queue`),
+    apiFetch<{ queue: any[] }>(
+      `/business/${businessId}/email/queue`,
+    ),
 
-  // Real WhatsApp Dual Mode
-  sendLiveWhatsApp: (data: any) =>
-    apiFetch<{ mode: 'WEB_HAIL' | 'META_CLOUD_API'; success: boolean; handoffUrl?: string; externalMessageId?: string; error?: string }>('/integrations/whatsapp/send', {
+  // Smart WhatsApp Message Generation & Human-Controlled Sending
+  prepareWhatsAppMessage: (data: {
+    businessId: string;
+    retailerId: string;
+    templateType: string;
+    invoiceId?: string;
+    commitmentId?: string;
+    paymentTransactionId?: string;
+    recipientPhoneOverride?: string;
+  }) =>
+    apiFetch<{
+      logId: string;
+      templateType: string;
+      messageText: string;
+      recipientName: string;
+      recipientPhone: string;
+      normalizedPhone: string;
+      isValidPhone: boolean;
+      phoneErrorMessage?: string;
+      waMeUrl: string | null;
+      contextSummary: {
+        retailerCode: string;
+        invoiceNumber?: string;
+        amountPaise?: string;
+        dueDate?: string;
+        overdueDays?: number;
+        businessName: string;
+      };
+    }>('/integrations/whatsapp/prepare', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-};
 
+  trackWhatsAppOpened: (data: {
+    businessId: string;
+    logId: string;
+    updatedMessageText?: string;
+    updatedRecipientPhone?: string;
+  }) =>
+    apiFetch<{
+      success: boolean;
+      logId: string;
+      status: string;
+      waMeUrl: string | null;
+    }>('/integrations/whatsapp/open', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  confirmWhatsAppSent: (data: {
+    businessId: string;
+    logId: string;
+    note?: string;
+  }) =>
+    apiFetch<{
+      success: boolean;
+      logId: string;
+      status: string;
+      confirmedAt: string;
+    }>('/integrations/whatsapp/confirm', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getRetailerWhatsAppHistory: (businessId: string, retailerId: string) =>
+    apiFetch<{
+      history: Array<{
+        id: string;
+        recipientName: string;
+        recipientPhone: string;
+        channel: string;
+        subject: string;
+        messageBody: string;
+        templateKey: string;
+        status: string;
+        confirmedAt?: string;
+        createdAt: string;
+      }>;
+    }>(`/integrations/whatsapp/history/${retailerId}?businessId=${businessId}`),
+
+  // Real WhatsApp Dual Mode.
+  sendLiveWhatsApp: (data: any) =>
+    apiFetch<{
+      mode: 'WEB_HAIL' | 'META_CLOUD_API';
+      success: boolean;
+      handoffUrl?: string;
+      externalMessageId?: string;
+      error?: string;
+    }>(
+      '/integrations/whatsapp/send',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    ),
+};

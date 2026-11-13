@@ -1,18 +1,13 @@
 import React from 'react';
 import { ArrowRight, ShieldCheck, TrendingUp, CheckCircle, Smartphone, Mail, AlertTriangle, Zap, Lock, CreditCard } from 'lucide-react';
-import type { LanguageCode } from '../i18n/translations';
 
 interface LandingPageProps {
-  language: LanguageCode;
-  onLanguageChange: (lang: LanguageCode) => void;
   onSignInClick: () => void;
   onGetStartedClick: () => void;
   onExploreDemoClick: () => void;
 }
 
 export function LandingPage({
-  language,
-  onLanguageChange,
   onSignInClick,
   onGetStartedClick,
   onExploreDemoClick,
@@ -56,20 +51,6 @@ export function LandingPage({
             <a href="#integrations" style={{ color: 'inherit', textDecoration: 'none' }}>Integrations</a>
             <a href="#security" style={{ color: 'inherit', textDecoration: 'none' }}>Security</a>
           </nav>
-
-          {/* Language Selector */}
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['en', 'kn', 'hi'] as LanguageCode[]).map((code) => (
-              <button
-                key={code}
-                className={`btn btn-sm ${language === code ? 'btn-primary' : ''}`}
-                style={{ padding: '3px 8px', fontSize: '0.75rem' }}
-                onClick={() => onLanguageChange(code)}
-              >
-                {code === 'en' ? 'EN' : code === 'kn' ? 'ಕನ್ನಡ' : 'हिन्दी'}
-              </button>
-            ))}
-          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button className="btn" onClick={onSignInClick} style={{ fontWeight: 600 }}>

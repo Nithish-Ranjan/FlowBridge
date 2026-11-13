@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Users,
@@ -15,6 +16,12 @@ import {
   CheckCircle2,
   X,
   Send,
+  BrainCircuit,
+  Clock3,
+  Loader2,
+  Sparkles,
+  AlertCircle,
+  MessageSquare,
 } from 'lucide-react';
 import { formatINR, parsePaise } from '@flowbridge/shared';
 import {
@@ -25,7 +32,10 @@ import {
   type PaymentTransactionDTO,
   type PaymentAllocationDTO,
   type WorkspacePayload,
+  type PaymentDelayPredictionResponse,
 } from '../api/client';
+import { PaymentDelayPredictionPanel } from './PaymentDelayPredictionPanel';
+import { WhatsAppMessageModal, type WhatsAppTemplateType } from './WhatsAppMessageModal';
 
 interface RetailersViewProps {
   workspace: WorkspacePayload;
@@ -78,6 +88,14 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
     outstandingBalancePaise: string;
     unappliedCreditPaise: string;
   } | null>(null);
+
+  // WhatsApp Message Preparation Modal
+  const [whatsAppModal, setWhatsAppModal] = useState<{
+    isOpen: boolean;
+    retailerId?: string;
+    invoiceId?: string;
+    templateType?: WhatsAppTemplateType;
+  }>({ isOpen: false });
 
   // Keep state synced with workspace
   useEffect(() => {
@@ -134,6 +152,7 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
         name: addName.trim(),
         contactName: addContact.trim() || undefined,
         phoneMasked: addPhone.trim() || undefined,
+        contactPhone: addPhone.trim() || undefined,
         creditTermsDays: Number(addTerms) || 15,
         notes: addNotes.trim() || undefined,
       });
@@ -478,7 +497,7 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
                 </div>
               </div>
 
-              {/* Footer View Dossier */}
+              {/* Footer View Dossier & WhatsApp Trigger */}
               <div
                 style={{
                   marginTop: 16,
@@ -489,11 +508,40 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
                   justifyContent: 'space-between',
                   fontSize: '0.78rem',
                   fontWeight: 700,
-                  color: 'var(--primary)',
                 }}
               >
-                <span>View Full Profile & Ledgers</span>
-                <ChevronRight size={15} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--primary)' }}>
+                  <span>View Full Profile</span>
+                  <ChevronRight size={15} />
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setWhatsAppModal({
+                      isOpen: true,
+                      retailerId: ret.id,
+                      templateType: overduePaise > 0n ? 'OVERDUE_REMINDER' : 'UPCOMING_REMINDER',
+                    });
+                  }}
+                  className="btn btn-sm"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    background: '#16A34A',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                  title="Prepare personalized WhatsApp message"
+                >
+                  <MessageSquare size={13} /> WhatsApp
+                </button>
               </div>
             </div>
           );
@@ -846,6 +894,12 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
                   </p>
                 </div>
 
+                {/* AI Payment Delay Prediction */}
+                <PaymentDelayPredictionPanel
+                  businessId={businessId}
+                  retailer={selectedRetailer}
+                />
+
                 {/* Verified Payment Identifiers */}
                 <div>
                   <h4 style={{ margin: '0 0 8px', fontSize: '0.86rem', fontWeight: 800 }}>
@@ -934,6 +988,35 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
                             >
                               {inv.status}
                             </span>
+                            {inv.status === 'OPEN' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWhatsAppModal({
+                                    isOpen: true,
+                                    retailerId: selectedRetailer.id,
+                                    invoiceId: inv.id,
+                                    templateType: inv.dueDate < workspace.business.openingCashDate ? 'OVERDUE_REMINDER' : 'UPCOMING_REMINDER',
+                                  });
+                                }}
+                                style={{
+                                  background: '#DCFCE7',
+                                  border: '1px solid #86EFAC',
+                                  color: '#166534',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  padding: '2px 6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                  fontSize: '0.68rem',
+                                  fontWeight: 700,
+                                }}
+                                title="Prepare WhatsApp message for this invoice"
+                              >
+                                <MessageSquare size={12} /> WhatsApp
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -943,16 +1026,41 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
 
                 {/* Actions */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hasOverdue = profileInvoices.some(
+                        (i) => i.status === 'OPEN' && i.dueDate < workspace.business.openingCashDate,
+                      );
+                      setWhatsAppModal({
+                        isOpen: true,
+                        retailerId: selectedRetailer.id,
+                        templateType: hasOverdue ? 'OVERDUE_REMINDER' : 'UPCOMING_REMINDER',
+                      });
+                    }}
+                    className="btn"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      background: '#16A34A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontWeight: 700,
+                    }}
+                  >
+                    <MessageSquare size={14} /> Prepare WhatsApp Message
+                  </button>
                   {onNavigateToCommunications && (
                     <button
                       onClick={() => {
                         setSelectedRetailer(null);
                         onNavigateToCommunications(selectedRetailer.id);
                       }}
-                      className="btn btn-primary"
+                      className="btn"
                       style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                     >
-                      <Send size={14} /> Open in WhatsApp Centre
+                      <Send size={14} /> Full Hub
                     </button>
                   )}
                   <button onClick={() => setSelectedRetailer(null)} className="btn">
@@ -964,7 +1072,20 @@ export const RetailersView: React.FC<RetailersViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Smart WhatsApp Message Generation Modal */}
+      <WhatsAppMessageModal
+        isOpen={whatsAppModal.isOpen}
+        onClose={() => setWhatsAppModal({ isOpen: false })}
+        businessId={businessId}
+        workspace={workspace}
+        initialRetailerId={whatsAppModal.retailerId}
+        initialInvoiceId={whatsAppModal.invoiceId}
+        initialTemplateType={whatsAppModal.templateType}
+        onSuccess={() => {
+          if (onRefreshWorkspace) onRefreshWorkspace();
+        }}
+      />
     </div>
   );
 };
-

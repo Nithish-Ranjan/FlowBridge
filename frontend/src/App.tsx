@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { addDays, formatINR, parsePaise, type BusinessDTO, type ResolutionPlan } from '@flowbridge/shared';
 import { api, getStoredSessionToken, setStoredSessionToken, type DashboardResponse } from './api/client';
-import { translations, type LanguageCode } from './i18n/translations';
 import { ForecastView } from './components/ForecastView';
 import { ResolveView } from './components/ResolveView';
 import { CommitmentsView } from './components/CommitmentsView';
@@ -73,7 +72,6 @@ const NAV_ITEMS: NavItem[] = [
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<any | null>(null);
-  const [language, setLanguage] = useState<LanguageCode>('en');
   const [showExitModal, setShowExitModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
@@ -88,8 +86,6 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const t = translations[language];
-
   // Check stored auth session
   useEffect(() => {
     const token = getStoredSessionToken();
@@ -98,9 +94,6 @@ export function App() {
         .getMe()
         .then((res) => {
           setCurrentUser(res.user);
-          if (res.user.languagePreference) {
-            setLanguage(res.user.languagePreference as LanguageCode);
-          }
         })
         .catch(() => {
           setStoredSessionToken(null);
@@ -237,13 +230,6 @@ export function App() {
     });
   }
 
-  function handleLanguageSwitch(newLang: LanguageCode) {
-    setLanguage(newLang);
-    if (currentUser) {
-      api.updatePreferences(newLang).catch(() => undefined);
-    }
-  }
-
   function handleExitLogout() {
     setStoredSessionToken(null);
     setCurrentUser(null);
@@ -256,8 +242,6 @@ export function App() {
     if (showAuthModal) {
       return (
         <AuthView
-          language={language}
-          onLanguageChange={handleLanguageSwitch}
           onClose={() => setShowAuthModal(false)}
           onSuccess={(user) => {
             setCurrentUser(user);
@@ -271,8 +255,6 @@ export function App() {
     return (
       <>
         <LandingPage
-          language={language}
-          onLanguageChange={handleLanguageSwitch}
           onSignInClick={() => setShowAuthModal(true)}
           onGetStartedClick={() => setShowOnboardingModal(true)}
           onExploreDemoClick={async () => {
@@ -318,7 +300,7 @@ export function App() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ fontWeight: 800, fontSize: '1.25rem', color: 'var(--primary)', letterSpacing: '-0.5px' }}>
-            {t.appName}
+            FlowBridge
           </div>
           {dashboard?.workspace.business && (
             <span className="code-pill">
@@ -328,20 +310,6 @@ export function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Language Switcher */}
-          <div style={{ display: 'flex', gap: 4 }}>
-            {(['en', 'kn', 'hi'] as LanguageCode[]).map((code) => (
-              <button
-                key={code}
-                className={`btn btn-sm ${language === code ? 'btn-primary' : ''}`}
-                style={{ padding: '3px 8px', fontSize: '0.78rem' }}
-                onClick={() => handleLanguageSwitch(code)}
-              >
-                {code === 'en' ? 'EN' : code === 'kn' ? 'ಕನ್ನಡ' : 'हिन्दी'}
-              </button>
-            ))}
-          </div>
-
           {/* User badge */}
           {currentUser && (
             <span className="muted" style={{ fontSize: '0.82rem' }}>
@@ -357,7 +325,7 @@ export function App() {
               else handleExitLogout();
             }}
           >
-            {t.smartExit}
+            Smart Exit
           </button>
         </div>
       </header>
@@ -517,7 +485,7 @@ export function App() {
             )}
             {activePage === 'reports' && (
               <div className="page-body">
-                <DailyPlanView businessId={dashboard.workspace.business.id} language={language} />
+                <DailyPlanView businessId={dashboard.workspace.business.id} />
               </div>
             )}
             {activePage === 'forecast' && (

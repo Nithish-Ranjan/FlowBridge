@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MessageSquare } from 'lucide-react';
 import {
   formatINR,
   paiseToDecimalInput,
@@ -8,6 +9,7 @@ import {
 } from '@flowbridge/shared';
 import type { WorkspacePayload } from '../api/client';
 import { OriginBadge, StatusPill } from './Badge';
+import { WhatsAppMessageModal, type WhatsAppTemplateType } from './WhatsAppMessageModal';
 
 interface LedgersViewProps {
   workspace: WorkspacePayload;
@@ -70,6 +72,14 @@ export function LedgersView({
   const [invNum, setInvNum] = useState('');
   const [invDue, setInvDue] = useState(workspace.business.openingCashDate);
   const [invAmtInr, setInvAmtInr] = useState('');
+
+  // WhatsApp Message Preparation Modal
+  const [whatsAppModal, setWhatsAppModal] = useState<{
+    isOpen: boolean;
+    retailerId?: string;
+    invoiceId?: string;
+    templateType?: WhatsAppTemplateType;
+  }>({ isOpen: false });
 
   // Quick add bill state
   const [billSupplierId, setBillSupplierId] = useState(workspace.suppliers[0]?.id ?? '');
@@ -145,6 +155,7 @@ export function LedgersView({
                 <th>Outstanding</th>
                 <th>Status / Evidence</th>
                 <th>Origin</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -182,6 +193,42 @@ export function LedgersView({
                     )}
                   </td>
                   <td><OriginBadge origin={inv.recordOrigin} /></td>
+                  <td>
+                    {inv.status !== 'PAID' ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setWhatsAppModal({
+                            isOpen: true,
+                            retailerId: inv.retailerId,
+                            invoiceId: inv.id,
+                            templateType:
+                              inv.dueDate < workspace.business.openingCashDate
+                                ? 'OVERDUE_REMINDER'
+                                : 'UPCOMING_REMINDER',
+                          })
+                        }
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          background: '#DCFCE7',
+                          color: '#166534',
+                          border: '1px solid #86EFAC',
+                          borderRadius: 4,
+                          padding: '3px 7px',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        title="Prepare WhatsApp message for this invoice"
+                      >
+                        <MessageSquare size={13} /> WhatsApp
+                      </button>
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.74rem' }}>Settled</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -381,6 +428,17 @@ export function LedgersView({
           </form>
         </div>
       </div>
+
+      {/* Smart WhatsApp Message Generation Modal */}
+      <WhatsAppMessageModal
+        isOpen={whatsAppModal.isOpen}
+        onClose={() => setWhatsAppModal({ isOpen: false })}
+        businessId={workspace.business.id}
+        workspace={workspace}
+        initialRetailerId={whatsAppModal.retailerId}
+        initialInvoiceId={whatsAppModal.invoiceId}
+        initialTemplateType={whatsAppModal.templateType}
+      />
     </div>
   );
 }

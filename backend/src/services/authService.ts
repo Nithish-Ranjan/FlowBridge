@@ -8,7 +8,7 @@ export interface UserDTO {
   email: string;
   fullName: string;
   role: 'OWNER' | 'FINANCE_MANAGER' | 'STAFF';
-  languagePreference: 'en' | 'hi' | 'ta';
+  languagePreference: 'en';
   businessName: string;
   businessCode: string;
 }
@@ -26,7 +26,6 @@ export async function registerUser(input: {
   password: string;
   fullName: string;
   businessName: string;
-  languagePreference?: 'en' | 'hi' | 'ta';
 }): Promise<AuthSessionResult> {
   const email = input.email.trim().toLowerCase();
   if (!email || !input.password || !input.fullName.trim() || !input.businessName.trim()) {
@@ -54,7 +53,7 @@ export async function registerUser(input: {
 
     // Create user
     const passwordHash = hashPassword(input.password);
-    const lang = input.languagePreference ?? 'en';
+    const lang = 'en';
     const userRes = await client.query<{ id: string; full_name: string; role: string; language_preference: string }>(
       `INSERT INTO users (
         business_id, email, password_hash, full_name, role, language_preference
@@ -202,11 +201,6 @@ export async function invalidateSession(rawToken: string): Promise<void> {
   const tokenHash = hashSessionToken(rawToken);
   const pool = getPool();
   await pool.query('DELETE FROM user_sessions WHERE token_hash = $1', [tokenHash]);
-}
-
-export async function updateUserLanguagePreference(userId: string, lang: 'en' | 'hi' | 'ta'): Promise<void> {
-  const pool = getPool();
-  await pool.query('UPDATE users SET language_preference = $1, updated_at = now() WHERE id = $2', [lang, userId]);
 }
 
 /**

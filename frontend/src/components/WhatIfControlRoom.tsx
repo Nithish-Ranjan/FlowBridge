@@ -54,9 +54,9 @@ export const WhatIfControlRoom: React.FC<WhatIfControlRoomProps> = ({
   const [reserveDrawRupees, setReserveDrawRupees] = useState<number>(0);
   const [expenseAdjustRupees, setExpenseAdjustRupees] = useState<number>(0);
 
-  const minThresholdPaise = parsePaise(business.minimumCashPaise || '5000000');
+  const minThresholdPaise = parsePaise(business.minimumCashPaise || '0');
   const minThresholdRupees = Number(minThresholdPaise) / 100;
-  const openingCashPaise = parsePaise(business.openingCashPaise || '6000000');
+  const openingCashPaise = parsePaise(business.openingCashPaise || '0');
 
   // Compute Baseline Forecast in-memory
   const baselineForecast = useMemo(() => {

@@ -12,6 +12,10 @@ let pool: Pool | null = null;
 let isMemoryFallback = false;
 let memDbInstance: IMemoryDb | null = null;
 
+export function isMemoryDbActive(): boolean {
+  return isMemoryFallback || process.env.USE_MEMORY_DB === 'true';
+}
+
 function createMemoryPool(): Pool {
   if (memDbInstance && pool) return pool;
 
@@ -75,15 +79,37 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   params: unknown[] = [],
   client?: PoolClient,
 ): Promise<QueryResult<T>> {
-  if (client) {
-    return client.query<T>(text, params);
+  if (isMemoryFallback) {
+    if (/^\s*(SAVEPOINT|RELEASE\s+SAVEPOINT|ROLLBACK\s+TO\s+SAVEPOINT|ALTER\s+TABLE\s+.*\s+(DISABLE|ENABLE)\s+TRIGGER)/i.test(text)) {
+      return { rows: [], rowCount: 0, command: 'NOOP', oid: 0, fields: [] } as unknown as QueryResult<T>;
+    }
   }
-  return getPool().query<T>(text, params);
+  let sql = text;
+  if (isMemoryFallback) {
+    sql = sql.replace(/\s+FOR\s+UPDATE\s+OF\s+[a-z0-9_]+/gi, '');
+  }
+  if (client) {
+    return client.query<T>(sql, params);
+  }
+  return getPool().query<T>(sql, params);
 }
 
 export async function withTransaction<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
   const p = getPool();
   const client = await p.connect();
+  if (isMemoryFallback) {
+    const origQuery = client.query.bind(client);
+    client.query = ((sqlOrConfig: any, ...args: any[]) => {
+      if (typeof sqlOrConfig === 'string') {
+        if (/^\s*(SAVEPOINT|RELEASE\s+SAVEPOINT|ROLLBACK\s+TO\s+SAVEPOINT|ALTER\s+TABLE\s+.*\s+(DISABLE|ENABLE)\s+TRIGGER)/i.test(sqlOrConfig)) {
+          return Promise.resolve({ rows: [], rowCount: 0, command: 'NOOP', oid: 0, fields: [] });
+        }
+        const cleaned = sqlOrConfig.replace(/\s+FOR\s+UPDATE\s+OF\s+[a-z0-9_]+/gi, '');
+        return (origQuery as any)(cleaned, ...args);
+      }
+      return (origQuery as any)(sqlOrConfig, ...args);
+    }) as any;
+  }
   try {
     await client.query('BEGIN');
     const result = await fn(client);

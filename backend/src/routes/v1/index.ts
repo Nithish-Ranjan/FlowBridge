@@ -1,6 +1,9 @@
+
 import { Router } from 'express';
+
 import { checkDatabaseHealth } from '../../db/pool.js';
 import { optionalAuth } from '../../middleware/auth.js';
+
 import { authRouter } from './authRoutes.js';
 import { automationAndReportRouter } from './automationAndReportRoutes.js';
 import { createBusinessRouter } from './businessRoutes.js';
@@ -9,6 +12,7 @@ import { creditRouter } from './creditAndNegotiationRoutes.js';
 import { createForecastResolutionRouter } from './forecastResolutionRoutes.js';
 import { asyncHandler } from './helpers.js';
 import { createLedgerRouter } from './ledgerRoutes.js';
+import { createMlPredictionRouter } from './mlPredictionRoutes.js';
 import { createPaymentRouter } from './paymentRoutes.js';
 import { reserveRouter } from './reserveRoutes.js';
 import { createRetailerRouter } from './retailerRoutes.js';
@@ -17,13 +21,14 @@ import { integrationsRouter } from './integrationsRoutes.js';
 export function createV1Router(): Router {
   const router = Router();
 
-  // Attach user/session if present on all v1 endpoints
+  // Attach user/session if present on all v1 endpoints.
   router.use(optionalAuth);
 
   router.get(
     '/health',
     asyncHandler(async (_req, res) => {
       const db = await checkDatabaseHealth();
+
       res.json({
         ok: db.ok,
         database: db.databaseName,
@@ -32,11 +37,13 @@ export function createV1Router(): Router {
     }),
   );
 
+  // Existing routes.
   router.use('/auth', authRouter);
   router.use('/reserve', reserveRouter);
   router.use(creditRouter);
   router.use(automationAndReportRouter);
   router.use(integrationsRouter);
+
   router.use(createBusinessRouter());
   router.use(createRetailerRouter());
   router.use(createLedgerRouter());
@@ -44,6 +51,8 @@ export function createV1Router(): Router {
   router.use(createForecastResolutionRouter());
   router.use(createCommitmentRouter());
 
+  // FlowBridge ML prediction route.
+  router.use(createMlPredictionRouter());
+
   return router;
 }
-

@@ -10,7 +10,7 @@ import type {
   RecordOrigin,
 } from '@flowbridge/shared';
 import { parsePaise, paiseToString } from '@flowbridge/shared';
-import { query } from '../pool.js';
+import { isMemoryDbActive, query } from '../pool.js';
 
 interface PaymentTransactionRow {
   id: string;
@@ -89,9 +89,9 @@ function mapPayment(row: PaymentTransactionRow): PaymentTransactionDTO {
     payerIdentifierMasked: row.payer_identifier_masked,
     payerDisplayName: row.payer_display_name,
     narration: row.narration,
-    amountPaise: row.amount_paise,
-    allocatedAmountPaise: row.allocated_amount_paise,
-    unappliedCreditPaise: row.unapplied_credit_paise,
+    amountPaise: String(row.amount_paise),
+    allocatedAmountPaise: String(row.allocated_amount_paise),
+    unappliedCreditPaise: String(row.unapplied_credit_paise),
     remainingToAllocatePaise: paiseToString(remaining > 0n ? remaining : 0n),
     transactionTimestamp: row.transaction_timestamp.toISOString(),
     valueDate: row.value_date,
@@ -339,6 +339,15 @@ export async function insertPaymentTransactionIfUnique(
   },
   client?: PoolClient,
 ): Promise<{ inserted: boolean; transaction: PaymentTransactionDTO | null }> {
+  const existing = await query<PaymentTransactionRow>(
+    `SELECT * FROM payment_transactions WHERE business_id = $1 AND transaction_fingerprint = $2 LIMIT 1`,
+    [input.businessId, input.transactionFingerprint],
+    client,
+  );
+  if (existing.rows.length > 0) {
+    return { inserted: false, transaction: null };
+  }
+
   const res = await query<PaymentTransactionRow>(
     `INSERT INTO payment_transactions (
       business_id, import_batch_id, direction, payment_method, external_transaction_reference,
@@ -461,6 +470,37 @@ export async function insertPaymentAllocation(
     ],
     client,
   );
+
+  if (isMemoryDbActive()) {
+    const delta = BigInt(input.allocatedAmountPaise);
+
+    await query(
+      `UPDATE payment_transactions
+          SET allocated_amount_paise = allocated_amount_paise + $2,
+              allocation_status = CASE
+                WHEN allocated_amount_paise + $2 >= amount_paise THEN 'ALLOCATED'
+                WHEN allocated_amount_paise + $2 > 0 THEN 'PARTIALLY_ALLOCATED'
+                ELSE 'UNAPPLIED'
+              END
+        WHERE id = $1`,
+      [input.paymentTransactionId, delta.toString()],
+      client,
+    );
+
+    await query(
+      `UPDATE customer_invoices
+          SET paid_amount_paise = paid_amount_paise + $2,
+              status = CASE
+                WHEN paid_amount_paise + $2 >= total_amount_paise THEN 'PAID'
+                WHEN paid_amount_paise + $2 > 0 THEN 'PARTIALLY_PAID'
+                ELSE 'OPEN'
+              END
+        WHERE id = $1`,
+      [input.invoiceId, delta.toString()],
+      client,
+    );
+  }
+
   return mapAllocation(res.rows[0]);
 }
 
@@ -489,6 +529,19 @@ export async function insertRetailerCreditEvent(
     ],
     client,
   );
+
+  if (isMemoryDbActive()) {
+    const delta = input.entryType === 'OVERPAYMENT_CREDIT' || input.entryType === 'CREDIT_REVERSAL'
+      ? BigInt(input.amountPaise)
+      : -BigInt(input.amountPaise);
+    await query(
+      `UPDATE retailers
+          SET unapplied_credit_paise = unapplied_credit_paise + $2
+        WHERE id = $1`,
+      [input.retailerId, delta.toString()],
+      client,
+    );
+  }
 }
 
 export async function recordAuditEvent(

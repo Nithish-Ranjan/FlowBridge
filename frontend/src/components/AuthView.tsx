@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { api, setStoredSessionToken } from '../api/client';
-import { translations, type LanguageCode } from '../i18n/translations';
 
 interface AuthViewProps {
   onSuccess: (user: any) => void;
-  language: LanguageCode;
-  onLanguageChange: (lang: LanguageCode) => void;
   onClose?: () => void;
 }
 
-export function AuthView({ onSuccess, language, onLanguageChange, onClose }: AuthViewProps) {
-  const t = translations[language];
+export function AuthView({ onSuccess, onClose }: AuthViewProps) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('owner@flowbridge.local');
   const [password, setPassword] = useState('FlowBridge123!');
@@ -44,7 +40,6 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
           password,
           fullName,
           businessName,
-          languagePreference: language,
         });
         setStoredSessionToken(res.token);
         onSuccess(res.user);
@@ -94,25 +89,11 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
         )}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <h1 style={{ margin: '0 0 6px', fontSize: '1.8rem', color: 'var(--primary)' }}>
-            {t.appName}
+            FlowBridge
           </h1>
           <p className="muted" style={{ margin: 0, fontSize: '0.88rem' }}>
-            {t.tagline}
+            Know where your money is, what needs attention and what to do next.
           </p>
-        </div>
-
-        {/* Language selector in auth */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
-          {(['en', 'kn', 'hi'] as LanguageCode[]).map((code) => (
-            <button
-              key={code}
-              type="button"
-              className={`btn btn-sm ${language === code ? 'btn-primary' : ''}`}
-              onClick={() => onLanguageChange(code)}
-            >
-              {code === 'en' ? 'English' : code === 'kn' ? 'ಕನ್ನಡ' : 'हिन्दी'}
-            </button>
-          ))}
         </div>
 
         {error && (
@@ -131,7 +112,7 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
             disabled={busy}
             onClick={handleDemoLogin}
           >
-            ⚡ {t.demoLogin}
+            ⚡ One-Click Demo Login
           </button>
           <div className="muted" style={{ textAlign: 'center', fontSize: '0.78rem', marginTop: 4 }}>
             Instantly enters Deccan FMCG Distributors seeded demo workspace
@@ -148,18 +129,18 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
           {isRegister && (
             <>
               <div className="field" style={{ marginBottom: 10 }}>
-                <label>{t.fullName}</label>
+                <label>Full Name</label>
                 <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
               </div>
               <div className="field" style={{ marginBottom: 10 }}>
-                <label>{t.businessName}</label>
+                <label>Business / Distribution Name</label>
                 <input value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
               </div>
             </>
           )}
 
           <div className="field" style={{ marginBottom: 10 }}>
-            <label>{t.email}</label>
+            <label>Email Address</label>
             <input
               type="email"
               value={email}
@@ -169,7 +150,7 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
           </div>
 
           <div className="field" style={{ marginBottom: 16 }}>
-            <label>{t.password}</label>
+            <label>Password</label>
             <input
               type="password"
               value={password}
@@ -184,7 +165,7 @@ export function AuthView({ onSuccess, language, onLanguageChange, onClose }: Aut
             style={{ width: '100%', padding: '9px 0', fontSize: '0.95rem' }}
             disabled={busy}
           >
-            {isRegister ? t.register : t.login}
+            {isRegister ? 'Create Account' : 'Log In'}
           </button>
         </form>
 

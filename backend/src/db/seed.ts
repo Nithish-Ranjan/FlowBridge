@@ -215,11 +215,11 @@ export async function seedDemoData(force = false): Promise<{ businessId: string;
     for (const r of retailerSeedData) {
       const res = await client.query<{ id: string }>(
         `INSERT INTO retailers (
-          business_id, retailer_code, name, contact_name, phone_masked, email,
+          business_id, retailer_code, name, contact_name, phone_masked, contact_phone, email,
           credit_terms_days, reliability_score, notes
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING id`,
-        [businessId, r.code, r.name, r.contact, r.phone, r.email, r.terms, r.score, r.notes],
+        [businessId, r.code, r.name, r.contact, r.phone, r.phone, r.email, r.terms, r.score, r.notes],
       );
       const rId = res.rows[0].id;
       retailerMap.set(r.code, rId);

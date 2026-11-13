@@ -3,7 +3,15 @@ import type { PoolClient } from 'pg';
 import { query, withTransaction } from '../../db/pool.js';
 import { parseIndianBankSms } from '../../services/bankSmsParser.js';
 import { sendEmail, testSmtpConnection } from '../../services/emailService.js';
-import { sendWhatsAppMessage } from '../../services/whatsappService.js';
+import {
+  prepareSmartWhatsAppMessage,
+  trackWhatsAppHandoffOpened,
+  confirmWhatsAppSent,
+  listRetailerWhatsAppLogs,
+  validateAndNormalizePhone,
+  buildWaMeUrl,
+  type WhatsAppTemplateType,
+} from '../../services/whatsappService.js';
 import { asyncHandler } from './helpers.js';
 import { hashPassword } from '../../utils/passwords.js';
 
@@ -86,7 +94,7 @@ integrationsRouter.post(
       warehouseAddress,
       email,
       password,
-      openingCashPaise = 5000000,
+      openingCashPaise = 0,
     } = req.body;
 
     if (!businessName || !email || !password) {
@@ -288,27 +296,97 @@ integrationsRouter.get(
   }),
 );
 
-// ── 4. WHATSAPP DUAL-MODE INTEGRATIONS ─────────────────────────
+// ── 4. WHATSAPP SMART GENERATION & HUMAN-CONTROLLED SENDING ─────────
 
+// Prepare smart WhatsApp message with real FlowBridge financial context
 integrationsRouter.post(
-  '/integrations/whatsapp/send',
+  '/integrations/whatsapp/prepare',
   asyncHandler(async (req: Request, res: Response) => {
-    const { businessId, recipientPhone, recipientName, recipientType, messageText, templateKey } = req.body;
-    if (!businessId || !recipientPhone || !messageText) {
-      res.status(400).json({ error: 'businessId, recipientPhone, and messageText are required' });
+    const { businessId, retailerId, templateType, invoiceId, commitmentId, paymentTransactionId, recipientPhoneOverride } = req.body;
+    if (!businessId || !retailerId) {
+      res.status(400).json({ error: 'businessId and retailerId are required.' });
       return;
     }
 
-    const result = await sendWhatsAppMessage({
+    const result = await prepareSmartWhatsAppMessage({
       businessId,
-      recipientPhone,
-      recipientName,
-      recipientType,
-      messageText,
-      templateKey,
+      retailerId,
+      templateType: (templateType as WhatsAppTemplateType) || 'UPCOMING_REMINDER',
+      invoiceId,
+      commitmentId,
+      paymentTransactionId,
+      recipientPhoneOverride,
     });
 
     res.json(result);
+  }),
+);
+
+// Track user clicking "Open WhatsApp"
+integrationsRouter.post(
+  '/integrations/whatsapp/open',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { businessId, logId, updatedMessageText, updatedRecipientPhone } = req.body;
+    if (!businessId || !logId) {
+      res.status(400).json({ error: 'businessId and logId are required.' });
+      return;
+    }
+
+    const result = await trackWhatsAppHandoffOpened(businessId, logId, updatedMessageText, updatedRecipientPhone);
+    res.json(result);
+  }),
+);
+
+// Human confirmation that message was sent manually in WhatsApp
+integrationsRouter.post(
+  '/integrations/whatsapp/confirm',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { businessId, logId, note } = req.body;
+    if (!businessId || !logId) {
+      res.status(400).json({ error: 'businessId and logId are required.' });
+      return;
+    }
+
+    const result = await confirmWhatsAppSent(businessId, logId, note);
+    res.json(result);
+  }),
+);
+
+// History of WhatsApp communications for this retailer
+integrationsRouter.get(
+  '/integrations/whatsapp/history/:retailerId',
+  asyncHandler(async (req: Request, res: Response) => {
+    const retailerId = String(req.params.retailerId || '');
+    const businessId = String(req.query.businessId || '');
+    if (!businessId || !retailerId) {
+      res.status(400).json({ error: 'businessId and retailerId are required.' });
+      return;
+    }
+
+    const history = await listRetailerWhatsAppLogs(businessId, retailerId);
+    res.json({ history });
+  }),
+);
+
+// Fallback legacy endpoint
+integrationsRouter.post(
+  '/integrations/whatsapp/send',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { businessId, recipientPhone, messageText } = req.body;
+    if (!businessId || !recipientPhone || !messageText) {
+      res.status(400).json({ error: 'businessId, recipientPhone, and messageText are required.' });
+      return;
+    }
+
+    const validation = validateAndNormalizePhone(recipientPhone);
+    const handoffUrl = validation.isValid ? buildWaMeUrl(validation.normalizedPhone, messageText) : undefined;
+
+    res.json({
+      mode: 'WEB_HAIL',
+      success: validation.isValid,
+      handoffUrl,
+      error: validation.errorMessage,
+    });
   }),
 );
 

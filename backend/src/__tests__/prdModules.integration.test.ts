@@ -63,13 +63,19 @@ describe('FlowBridge PRD Upgraded Modules Integration Test', () => {
 
     // 3. Retailers & Credit Agreements Module
     const pool = getPool();
-    const retRes = await pool.query<{ id: string }>('SELECT id FROM retailers WHERE business_id = $1 LIMIT 1', [businessId]);
-    const testRetailerId = retRes.rows[0].id;
+    const retRes = await pool.query<{ id: string }>(
+      `SELECT id FROM retailers
+       WHERE business_id = $1
+         AND id NOT IN (SELECT DISTINCT retailer_id FROM customer_invoices WHERE business_id = $1 AND status IN ('OPEN', 'OVERDUE'))
+       LIMIT 1`,
+      [businessId],
+    );
+    const testRetailerId = retRes.rows[0]?.id ?? (await pool.query<{ id: string }>('SELECT id FROM retailers WHERE business_id = $1 LIMIT 1', [businessId])).rows[0].id;
 
     const agreement = await createCreditAgreement({
       businessId,
       retailerId: testRetailerId,
-      creditLimitPaise: '5000000', // ₹50,000
+      creditLimitPaise: '25000000', // ₹2,50,000
       standardTermDays: 30,
       gracePeriodDays: 7,
       lateFeePct: 1.5,
@@ -81,10 +87,10 @@ describe('FlowBridge PRD Upgraded Modules Integration Test', () => {
     expect(agreementsList.length).toBeGreaterThan(0);
 
     // Verify Credit-Sale Protection
-    const saleCheckAllowed = await checkCreditSaleProtection(businessId, testRetailerId, '2000000'); // ₹20k within ₹50k limit
+    const saleCheckAllowed = await checkCreditSaleProtection(businessId, testRetailerId, '2000000'); // ₹20k within limit
     expect(saleCheckAllowed.allowed).toBe(true);
 
-    const saleCheckBlocked = await checkCreditSaleProtection(businessId, testRetailerId, '6000000'); // ₹60k exceeds limit
+    const saleCheckBlocked = await checkCreditSaleProtection(businessId, testRetailerId, '30000000'); // ₹3,00,000 exceeds limit
     expect(saleCheckBlocked.allowed).toBe(false);
     expect(saleCheckBlocked.reason).toContain('exceeds approved credit limit');
 
