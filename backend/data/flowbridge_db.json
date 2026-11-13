@@ -1,0 +1,951 @@
+{
+  "businesses": [
+    {
+      "id": "demo-business-001",
+      "name": "Sharma Distribution Hub",
+      "type": "FMCG & Consumer Goods Wholesale",
+      "country": "India",
+      "currency": "INR",
+      "opening_cash_paise": 6000000,
+      "minimum_threshold_paise": 5000000,
+      "is_demo": true,
+      "created_at": null
+    }
+  ],
+  "business_members": [
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    },
+    {
+      "id": "bm-demo-001",
+      "user_id": "demo-user-001",
+      "business_id": "demo-business-001",
+      "role": "OWNER",
+      "created_at": null
+    }
+  ],
+  "password_reset_tokens": [],
+  "retailers": [
+    {
+      "id": "ret-01",
+      "business_id": "demo-business-001",
+      "name": "Shree Balaji Mart",
+      "contact_person": "Manoj Agarwal",
+      "phone": "+91 98201 11223",
+      "credit_limit_paise": 20000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 8000000,
+      "current_balance_paise": 8000000,
+      "risk_level": "ELEVATED",
+      "risk_reasons": "Payment delayed by 14 days; missed previous commitment"
+    },
+    {
+      "id": "ret-02",
+      "business_id": "demo-business-001",
+      "name": "Krishna Superstore",
+      "contact_person": "Suresh Patel",
+      "phone": "+91 98334 22334",
+      "credit_limit_paise": 15000000,
+      "payment_terms_days": 21,
+      "opening_balance_paise": 5000000,
+      "current_balance_paise": 5000000,
+      "risk_level": "MEDIUM",
+      "risk_reasons": "Partial payment history; promised payment on 17-Nov"
+    },
+    {
+      "id": "ret-03",
+      "business_id": "demo-business-001",
+      "name": "Om Sai Provision Store",
+      "contact_person": "Ramesh Gupta",
+      "phone": "+91 98112 33445",
+      "credit_limit_paise": 10000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 4500000,
+      "current_balance_paise": 4500000,
+      "risk_level": "ELEVATED",
+      "risk_reasons": "2 invoices overdue; high credit limit utilization"
+    },
+    {
+      "id": "ret-04",
+      "business_id": "demo-business-001",
+      "name": "Laxmi General Trading",
+      "contact_person": "Vinod Shah",
+      "phone": "+91 98450 44556",
+      "credit_limit_paise": 12000000,
+      "payment_terms_days": 30,
+      "opening_balance_paise": 3000000,
+      "current_balance_paise": 3000000,
+      "risk_level": "LOW",
+      "risk_reasons": "Consistent on-time payer; excellent track record"
+    },
+    {
+      "id": "ret-05",
+      "business_id": "demo-business-001",
+      "name": "Mahadev Retail Traders",
+      "contact_person": "Kailash Meena",
+      "phone": "+91 98760 55667",
+      "credit_limit_paise": 8000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 2500000,
+      "current_balance_paise": 2500000,
+      "risk_level": "LOW",
+      "risk_reasons": "Regular weekly settle-ups"
+    },
+    {
+      "id": "ret-06",
+      "business_id": "demo-business-001",
+      "name": "Ganpati Kirana Stores",
+      "contact_person": "Dinesh Joshi",
+      "phone": "+91 98220 66778",
+      "credit_limit_paise": 10000000,
+      "payment_terms_days": 20,
+      "opening_balance_paise": 4000000,
+      "current_balance_paise": 4000000,
+      "risk_level": "MEDIUM",
+      "risk_reasons": "Seasonal slowdown in confectionary orders"
+    },
+    {
+      "id": "ret-07",
+      "business_id": "demo-business-001",
+      "name": "Venkateshwara Hyper",
+      "contact_person": "Prasad Rao",
+      "phone": "+91 98490 77889",
+      "credit_limit_paise": 25000000,
+      "payment_terms_days": 30,
+      "opening_balance_paise": 9500000,
+      "current_balance_paise": 9500000,
+      "risk_level": "LOW",
+      "risk_reasons": "Large organized retail volume, 30-day corporate terms"
+    },
+    {
+      "id": "ret-08",
+      "business_id": "demo-business-001",
+      "name": "Bharat Wholesalers & Retail",
+      "contact_person": "Sunil Kumar",
+      "phone": "+91 98100 88990",
+      "credit_limit_paise": 15000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 3500000,
+      "current_balance_paise": 3500000,
+      "risk_level": "LOW",
+      "risk_reasons": "Prompt NEFT payer"
+    },
+    {
+      "id": "ret-09",
+      "business_id": "demo-business-001",
+      "name": "City Bazaar Supermarket",
+      "contact_person": "Pooja Verma",
+      "phone": "+91 98300 99001",
+      "credit_limit_paise": 18000000,
+      "payment_terms_days": 21,
+      "opening_balance_paise": 6000000,
+      "current_balance_paise": 6000000,
+      "risk_level": "MEDIUM",
+      "risk_reasons": "Occasional payment splits over two banking cycles"
+    },
+    {
+      "id": "ret-10",
+      "business_id": "demo-business-001",
+      "name": "Ambaji Departmental",
+      "contact_person": "Chetan Trivedi",
+      "phone": "+91 98250 12345",
+      "credit_limit_paise": 10000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 2000000,
+      "current_balance_paise": 2000000,
+      "risk_level": "LOW",
+      "risk_reasons": "Reliable weekly settlements"
+    },
+    {
+      "id": "ret-11",
+      "business_id": "demo-business-001",
+      "name": "Sunrise Express Mart",
+      "contact_person": "Deepak Mishra",
+      "phone": "+91 98670 23456",
+      "credit_limit_paise": 12000000,
+      "payment_terms_days": 21,
+      "opening_balance_paise": 3800000,
+      "current_balance_paise": 3800000,
+      "risk_level": "LOW",
+      "risk_reasons": "Good turnover, automated UPI payments"
+    },
+    {
+      "id": "ret-12",
+      "business_id": "demo-business-001",
+      "name": "Vijay Trading Co",
+      "contact_person": "Vijay Kothari",
+      "phone": "+91 98920 34567",
+      "credit_limit_paise": 15000000,
+      "payment_terms_days": 15,
+      "opening_balance_paise": 7200000,
+      "current_balance_paise": 7200000,
+      "risk_level": "CRITICAL",
+      "risk_reasons": "Multiple bounced cheques in past 60 days, strictly monitor"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "sup-01",
+      "business_id": "demo-business-001",
+      "name": "Apex Consumer Goods Ltd",
+      "contact_person": "Anil Singhania",
+      "phone": "+91 99001 11222",
+      "payment_terms_days": 15,
+      "outstanding_payable_paise": 15000000,
+      "priority": "CRITICAL"
+    },
+    {
+      "id": "sup-02",
+      "business_id": "demo-business-001",
+      "name": "Hindustan FMCG Supplies",
+      "contact_person": "Vikram Seth",
+      "phone": "+91 99002 22333",
+      "payment_terms_days": 30,
+      "outstanding_payable_paise": 8000000,
+      "priority": "HIGH"
+    },
+    {
+      "id": "sup-03",
+      "business_id": "demo-business-001",
+      "name": "National Agro Distributions",
+      "contact_person": "Gurpreet Singh",
+      "phone": "+91 99003 33444",
+      "payment_terms_days": 21,
+      "outstanding_payable_paise": 4500000,
+      "priority": "MEDIUM"
+    },
+    {
+      "id": "sup-04",
+      "business_id": "demo-business-001",
+      "name": "Metro Pack Packaging",
+      "contact_person": "Sanjay Jain",
+      "phone": "+91 99004 44555",
+      "payment_terms_days": 30,
+      "outstanding_payable_paise": 2500000,
+      "priority": "LOW"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "inv-01",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-01",
+      "invoice_number": "INV-2026-089",
+      "issue_date": "2026-10-15",
+      "due_date": "2026-10-30",
+      "total_amount_paise": 8000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 8000000,
+      "status": "OVERDUE",
+      "notes": "Urgent collection required. Retailer promised partial payment."
+    },
+    {
+      "id": "inv-02",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-02",
+      "invoice_number": "INV-2026-092",
+      "issue_date": "2026-10-20",
+      "due_date": "2026-11-10",
+      "total_amount_paise": 5000000,
+      "paid_amount_paise": 2000000,
+      "outstanding_amount_paise": 3000000,
+      "status": "PARTIALLY_PAID",
+      "notes": "₹20,000 received via IMPS; balance promised on 17-Nov."
+    },
+    {
+      "id": "inv-03",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-03",
+      "invoice_number": "INV-2026-094",
+      "issue_date": "2026-10-22",
+      "due_date": "2026-11-06",
+      "total_amount_paise": 3500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 3500000,
+      "status": "OVERDUE",
+      "notes": "First reminder sent. No response yet."
+    },
+    {
+      "id": "inv-04",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-12",
+      "invoice_number": "INV-2026-095",
+      "issue_date": "2026-10-25",
+      "due_date": "2026-11-09",
+      "total_amount_paise": 4200000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 4200000,
+      "status": "OVERDUE",
+      "notes": "High risk retailer; requires in-person follow up."
+    },
+    {
+      "id": "inv-05",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-04",
+      "invoice_number": "INV-2026-101",
+      "issue_date": "2026-10-28",
+      "due_date": "2026-11-18",
+      "total_amount_paise": 3000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 3000000,
+      "status": "ISSUED",
+      "notes": "Standard monthly billing"
+    },
+    {
+      "id": "inv-06",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-05",
+      "invoice_number": "INV-2026-102",
+      "issue_date": "2026-11-01",
+      "due_date": "2026-11-16",
+      "total_amount_paise": 2500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 2500000,
+      "status": "ISSUED",
+      "notes": "Weekly replenishment order"
+    },
+    {
+      "id": "inv-07",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-06",
+      "invoice_number": "INV-2026-103",
+      "issue_date": "2026-11-02",
+      "due_date": "2026-11-22",
+      "total_amount_paise": 4000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 4000000,
+      "status": "ISSUED",
+      "notes": "Festive stock order"
+    },
+    {
+      "id": "inv-08",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-07",
+      "invoice_number": "INV-2026-104",
+      "issue_date": "2026-10-28",
+      "due_date": "2026-11-27",
+      "total_amount_paise": 9500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 9500000,
+      "status": "ISSUED",
+      "notes": "Hypermarket bulk delivery"
+    },
+    {
+      "id": "inv-09",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-08",
+      "invoice_number": "INV-2026-105",
+      "issue_date": "2026-11-05",
+      "due_date": "2026-11-20",
+      "total_amount_paise": 3500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 3500000,
+      "status": "ISSUED",
+      "notes": "Beverages and snacks"
+    },
+    {
+      "id": "inv-10",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-09",
+      "invoice_number": "INV-2026-106",
+      "issue_date": "2026-11-03",
+      "due_date": "2026-11-24",
+      "total_amount_paise": 6000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 6000000,
+      "status": "ISSUED",
+      "notes": "Personal care consignment"
+    },
+    {
+      "id": "inv-11",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-10",
+      "invoice_number": "INV-2026-110",
+      "issue_date": "2026-11-08",
+      "due_date": "2026-11-23",
+      "total_amount_paise": 2000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 2000000,
+      "status": "ISSUED",
+      "notes": "Spices and staples"
+    },
+    {
+      "id": "inv-12",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-11",
+      "invoice_number": "INV-2026-112",
+      "issue_date": "2026-11-09",
+      "due_date": "2026-11-30",
+      "total_amount_paise": 3800000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 3800000,
+      "status": "ISSUED",
+      "notes": "Instant noodles and biscuits"
+    },
+    {
+      "id": "inv-13",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-04",
+      "invoice_number": "INV-2026-071",
+      "issue_date": "2026-09-20",
+      "due_date": "2026-10-20",
+      "total_amount_paise": 4500000,
+      "paid_amount_paise": 4500000,
+      "outstanding_amount_paise": 0,
+      "status": "PAID",
+      "notes": "Fully paid via RTGS"
+    },
+    {
+      "id": "inv-14",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-05",
+      "invoice_number": "INV-2026-075",
+      "issue_date": "2026-09-25",
+      "due_date": "2026-10-10",
+      "total_amount_paise": 2800000,
+      "paid_amount_paise": 2800000,
+      "outstanding_amount_paise": 0,
+      "status": "PAID",
+      "notes": "Settled on time"
+    },
+    {
+      "id": "inv-15",
+      "business_id": "demo-business-001",
+      "retailer_id": "ret-08",
+      "invoice_number": "INV-2026-080",
+      "issue_date": "2026-10-01",
+      "due_date": "2026-10-16",
+      "total_amount_paise": 3200000,
+      "paid_amount_paise": 3200000,
+      "outstanding_amount_paise": 0,
+      "status": "PAID",
+      "notes": "Prompt UPI settlement"
+    }
+  ],
+  "invoice_items": [],
+  "supplier_bills": [
+    {
+      "id": "bill-01",
+      "business_id": "demo-business-001",
+      "supplier_id": "sup-01",
+      "bill_number": "BILL-APX-8821",
+      "issue_date": "2026-11-03",
+      "due_date": "2026-11-18",
+      "total_amount_paise": 15000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 15000000,
+      "status": "PENDING",
+      "priority": "CRITICAL",
+      "notes": "Primary FMCG consignment. Strict payment terms required to maintain supply line."
+    },
+    {
+      "id": "bill-02",
+      "business_id": "demo-business-001",
+      "supplier_id": "sup-02",
+      "bill_number": "BILL-HIN-4019",
+      "issue_date": "2026-10-25",
+      "due_date": "2026-11-25",
+      "total_amount_paise": 8000000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 8000000,
+      "status": "PENDING",
+      "priority": "HIGH",
+      "notes": "Soaps and detergents stock"
+    },
+    {
+      "id": "bill-03",
+      "business_id": "demo-business-001",
+      "supplier_id": "sup-03",
+      "bill_number": "BILL-NAT-1290",
+      "issue_date": "2026-11-02",
+      "due_date": "2026-11-23",
+      "total_amount_paise": 4500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 4500000,
+      "status": "PENDING",
+      "priority": "MEDIUM",
+      "notes": "Grains and pulses delivery"
+    },
+    {
+      "id": "bill-04",
+      "business_id": "demo-business-001",
+      "supplier_id": "sup-04",
+      "bill_number": "BILL-MET-0982",
+      "issue_date": "2026-10-31",
+      "due_date": "2026-11-30",
+      "total_amount_paise": 2500000,
+      "paid_amount_paise": 0,
+      "outstanding_amount_paise": 2500000,
+      "status": "PENDING",
+      "priority": "LOW",
+      "notes": "Corrugated cartons and shrink wraps"
+    }
+  ],
+  "transactions": [
+    {
+      "id": "tx-01",
+      "business_id": "demo-business-001",
+      "amount_paise": 4500000,
+      "currency": "INR",
+      "transaction_type": "CREDIT",
+      "transaction_date": "2026-10-20T11:30:00Z",
+      "counterparty_name": "Laxmi General Trading",
+      "reference_number": "RTGS/HDFC/2026102001",
+      "source": "BANK_FEED",
+      "verification_status": "VERIFIED",
+      "matched_invoice_id": "inv-13"
+    },
+    {
+      "id": "tx-02",
+      "business_id": "demo-business-001",
+      "amount_paise": 2800000,
+      "currency": "INR",
+      "transaction_type": "CREDIT",
+      "transaction_date": "2026-10-10T15:20:00Z",
+      "counterparty_name": "Mahadev Retail Traders",
+      "reference_number": "NEFT/SBI/992837112",
+      "source": "BANK_FEED",
+      "verification_status": "VERIFIED",
+      "matched_invoice_id": "inv-14"
+    },
+    {
+      "id": "tx-03",
+      "business_id": "demo-business-001",
+      "amount_paise": 2000000,
+      "currency": "INR",
+      "transaction_type": "CREDIT",
+      "transaction_date": "2026-11-10T14:45:00Z",
+      "counterparty_name": "Krishna Superstore",
+      "reference_number": "IMPS/AXIS/440019283",
+      "source": "SMS",
+      "verification_status": "VERIFIED",
+      "matched_invoice_id": "inv-02"
+    },
+    {
+      "id": "tx-04",
+      "business_id": "demo-business-001",
+      "amount_paise": 7500000,
+      "currency": "INR",
+      "transaction_type": "DEBIT",
+      "transaction_date": "2026-10-25T16:00:00Z",
+      "counterparty_name": "Apex Consumer Goods Ltd",
+      "reference_number": "NEFT/HDFC/110928384",
+      "source": "BANK_FEED",
+      "verification_status": "VERIFIED",
+      "matched_invoice_id": null
+    },
+    {
+      "id": "tx-05",
+      "business_id": "demo-business-001",
+      "amount_paise": 2500000,
+      "currency": "INR",
+      "transaction_type": "CREDIT",
+      "transaction_date": "2026-11-12T09:15:00Z",
+      "counterparty_name": "Unknown / UPI-TRANSFER",
+      "reference_number": "UPI/129384758291/CREDIT",
+      "source": "SMS",
+      "verification_status": "UNMATCHED",
+      "matched_invoice_id": null
+    }
+  ],
+  "transaction_allocations": [],
+  "commitments": [
+    {
+      "id": "com-01",
+      "business_id": "demo-business-001",
+      "counterparty_type": "RETAILER",
+      "counterparty_id": "ret-02",
+      "invoice_id": "inv-02",
+      "expected_amount_paise": 3000000,
+      "expected_date": "2026-11-17",
+      "status": "CONFIRMED",
+      "notes": "Suresh Patel promised balance of ₹30,000 before 18-Nov supplier payment."
+    },
+    {
+      "id": "com-02",
+      "business_id": "demo-business-001",
+      "counterparty_type": "RETAILER",
+      "counterparty_id": "ret-01",
+      "invoice_id": "inv-01",
+      "expected_amount_paise": 4000000,
+      "expected_date": "2026-11-05",
+      "status": "FAILED",
+      "notes": "Manoj promised ₹40,000 on 5-Nov but bank transfer failed; renegotiation needed."
+    },
+    {
+      "id": "com-03",
+      "business_id": "demo-business-001",
+      "counterparty_type": "RETAILER",
+      "counterparty_id": "ret-05",
+      "invoice_id": "inv-06",
+      "expected_amount_paise": 2500000,
+      "expected_date": "2026-11-16",
+      "status": "CONFIRMED",
+      "notes": "Kailash Meena confirmed full payment via UPI on Monday."
+    }
+  ],
+  "cash_accounts": [
+    {
+      "id": "ca-demo-001",
+      "business_id": "demo-business-001",
+      "name": "HDFC Current Account",
+      "account_number_masked": "XXXXXX4920",
+      "bank_name": "HDFC Bank",
+      "current_balance_paise": 6000000,
+      "is_primary": true
+    }
+  ],
+  "reserve_accounts": [
+    {
+      "id": "res-demo-001",
+      "business_id": "demo-business-001",
+      "name": "Operating Emergency Reserve",
+      "target_amount_paise": 10000000,
+      "allocated_amount_paise": 3000000
+    }
+  ],
+  "reserve_allocations": [
+    {
+      "id": "alloc-demo-001",
+      "business_id": "demo-business-001",
+      "reserve_id": "res-demo-001",
+      "amount_paise": 3000000,
+      "allocation_type": "ALLOCATE",
+      "reason": "Protected cushion for distributor operations"
+    }
+  ],
+  "resolution_recommendations": [
+    {
+      "id": "rec-01",
+      "business_id": "demo-business-001",
+      "problem_title": "Collect partial overdue payment from Shree Balaji Mart",
+      "proposed_action": "Request an immediate partial settlement of ₹40,000 on overdue Invoice INV-2026-089 before 17-Nov. Balaji Mart has sufficient sales velocity to clear 50% immediately.",
+      "financial_impact_paise": 4000000,
+      "target_type": "RETAILER",
+      "target_id": "ret-01",
+      "target_name": "Shree Balaji Mart",
+      "deadline_date": "2026-11-17",
+      "risk_assessment": "Medium relationship risk; soften request with upcoming stock allocation guarantee.",
+      "status": null
+    },
+    {
+      "id": "rec-02",
+      "business_id": "demo-business-001",
+      "problem_title": "Follow up on Krishna Superstore committed payment",
+      "proposed_action": "Confirm scheduled transfer of ₹30,000 due on 17-Nov for Invoice INV-2026-092. Follow up with Suresh Patel to ensure timely clearing before 18-Nov.",
+      "financial_impact_paise": 3000000,
+      "target_type": "RETAILER",
+      "target_id": "ret-02",
+      "target_name": "Krishna Superstore",
+      "deadline_date": "2026-11-17",
+      "risk_assessment": "Low risk; commitment was mutually agreed during last order.",
+      "status": null
+    },
+    {
+      "id": "rec-03",
+      "business_id": "demo-business-001",
+      "problem_title": "Negotiate 7-day payment split with Apex Consumer Goods",
+      "proposed_action": "Apex Bill BILL-APX-8821 is ₹1,50,000 due 18-Nov. Negotiate paying ₹1,00,000 on 18-Nov and remaining ₹50,000 on 25-Nov after weekend hypermarket collections.",
+      "financial_impact_paise": 5000000,
+      "target_type": "SUPPLIER",
+      "target_id": "sup-01",
+      "target_name": "Apex Consumer Goods Ltd",
+      "deadline_date": "2026-11-16",
+      "risk_assessment": "Low; distributor maintains Grade A account status with Apex and regular order pipeline.",
+      "status": null
+    },
+    {
+      "id": "rec-04",
+      "business_id": "demo-business-001",
+      "problem_title": "Eligible Emergency Reserve buffer release",
+      "proposed_action": "If Balaji Mart collection is delayed beyond 18-Nov, release ₹20,000 from the Operating Emergency Reserve to cover the remaining deficit without overdraft fees.",
+      "financial_impact_paise": 2000000,
+      "target_type": "RESERVE",
+      "target_id": "res-demo-001",
+      "target_name": "Operating Emergency Reserve",
+      "deadline_date": "2026-11-18",
+      "risk_assessment": "Will temporarily reduce emergency reserve to ₹10,000 (10% of target). Must be replenished within 14 days.",
+      "status": null
+    }
+  ],
+  "resolution_actions": [],
+  "what_if_scenarios": [],
+  "devices": [
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    },
+    {
+      "id": "dev-demo-001",
+      "business_id": "demo-business-001",
+      "device_name": "Samsung Galaxy S24 (Distributor Device)",
+      "device_fingerprint": "SHA256:7a9f8e4c3b2d1a0e",
+      "secret_token": "dev_token_demo_987216",
+      "last_sync_at": null,
+      "status": "REVOKED"
+    }
+  ],
+  "sms_ingestion_events": [
+    {
+      "id": "sms-01",
+      "business_id": "demo-business-001",
+      "sender": "HDFCBK",
+      "raw_message": "INR 25,000.00 credited to your A/c XX4920 on 12-Nov-2026 by UPI Ref 129384758291. Avl Bal INR 60,000.00",
+      "parsed_amount_paise": 2500000,
+      "parsed_type": "CREDIT",
+      "parsed_reference": "129384758291",
+      "parsed_date": "2026-11-12T09:15:00Z",
+      "parsed_account_masked": "XX4920",
+      "status": "PROCESSED"
+    },
+    {
+      "id": "sms-02",
+      "business_id": "demo-business-001",
+      "sender": "SBIINB",
+      "raw_message": "Dear Customer, your A/c XX4920 credited with INR 20,000.00 on 10-Nov-2026 via IMPS Ref 440019283. SBI",
+      "parsed_amount_paise": 2000000,
+      "parsed_type": "CREDIT",
+      "parsed_reference": "440019283",
+      "parsed_date": "2026-11-10T14:45:00Z",
+      "parsed_account_masked": "XX4920",
+      "status": "PROCESSED"
+    },
+    {
+      "id": "sms-03",
+      "business_id": "demo-business-001",
+      "sender": "HDFCBK",
+      "raw_message": "INR 75,000.00 debited from A/c XX4920 on 25-Oct-2026 towards NEFT Ref 110928384. Avl Bal INR 1,15,000.00",
+      "parsed_amount_paise": 7500000,
+      "parsed_type": "DEBIT",
+      "parsed_reference": "110928384",
+      "parsed_date": "2026-10-25T16:00:00Z",
+      "parsed_account_masked": "XX4920",
+      "status": "PROCESSED"
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-01",
+      "business_id": "demo-business-001",
+      "title": "Critical Cash Shortage Warning",
+      "message": "Projected ₹90,000 cash deficit on 18-Nov-2026 due to Apex Consumer Goods payment of ₹1,50,000 against ₹60,000 available cash.",
+      "priority": "CRITICAL",
+      "category": "CASHFLOW",
+      "link_to": "/resolution",
+      "is_read": null
+    },
+    {
+      "id": "notif-02",
+      "business_id": "demo-business-001",
+      "title": "Overdue Invoice Alert",
+      "message": "Shree Balaji Mart Invoice INV-2026-089 (₹80,000) is now 14 days overdue.",
+      "priority": "HIGH",
+      "category": "INVOICE",
+      "link_to": "/invoices",
+      "is_read": null
+    },
+    {
+      "id": "notif-03",
+      "business_id": "demo-business-001",
+      "title": "Payment Commitment Due Soon",
+      "message": "Krishna Superstore promised ₹30,000 settlement on 17-Nov-2026.",
+      "priority": "MEDIUM",
+      "category": "COMMITMENT",
+      "link_to": "/commitments",
+      "is_read": null
+    },
+    {
+      "id": "notif-04",
+      "business_id": "demo-business-001",
+      "title": "Unmatched Bank Transaction",
+      "message": "UPI Credit of ₹25,000 on 12-Nov requires manual reconciliation.",
+      "priority": "MEDIUM",
+      "category": "RECONCILIATION",
+      "link_to": "/transactions",
+      "is_read": null
+    }
+  ],
+  "communication_logs": [
+    {
+      "id": "comm-857caba8-70c3-4033-84b8-474fab33cdcb",
+      "business_id": "demo-business-001",
+      "recipient_name": "Shree Balaji Mart",
+      "recipient_contact": "+91 98201 11223",
+      "channel": "WHATSAPP",
+      "message_type": "OVERDUE_REMINDER",
+      "content": "Dear Shree Balaji Mart,\n\nThis is a gentle reminder that Invoice INV-2026-089 for ₹40,000 was due on 30-Oct-2026.\n\nPlease arrange the payment at your earliest convenience to keep your account in good standing and ensure uninterrupted dispatches.\n\nThank you,\nSharma Distribution Hub",
+      "status": null
+    }
+  ],
+  "automation_rules": [
+    {
+      "id": "rule-01",
+      "business_id": "demo-business-001",
+      "name": "Overdue Invoice Auto-Reminder",
+      "trigger_event": "INVOICE_OVERDUE_3_DAYS",
+      "action_type": "PREPARE_WHATSAPP_REMINDER",
+      "requires_approval": true,
+      "is_active": null
+    },
+    {
+      "id": "rule-02",
+      "business_id": "demo-business-001",
+      "name": "Cash Deficit Early Warning",
+      "trigger_event": "FORECAST_BELOW_MINIMUM_THRESHOLD",
+      "action_type": "NOTIFY_DISTRIBUTOR_OWNER",
+      "requires_approval": false,
+      "is_active": null
+    },
+    {
+      "id": "rule-03",
+      "business_id": "demo-business-001",
+      "name": "Commitment Due T-1 Alert",
+      "trigger_event": "COMMITMENT_DUE_TOMORROW",
+      "action_type": "SEND_TELEGRAM_WHATSAPP_SUMMARY",
+      "requires_approval": false,
+      "is_active": null
+    },
+    {
+      "id": "rule-04",
+      "business_id": "demo-business-001",
+      "name": "Unmatched Transaction Reconciliation Task",
+      "trigger_event": "TRANSACTION_UNMATCHED_24H",
+      "action_type": "CREATE_RECONCILIATION_TASK",
+      "requires_approval": false,
+      "is_active": null
+    }
+  ],
+  "automation_executions": [],
+  "audit_logs": [],
+  "users": [
+    {
+      "id": "demo-user-001",
+      "email": "demo@flowbridge.fintech",
+      "password_hash": "$2a$10$bl3nes7yeuXcFu.U.lc3dedL7V5NGrnOJwbiuFb6gPMOwOoEyQKou",
+      "full_name": "Rajesh Sharma (Demo Owner)",
+      "phone": "+91 98765 43210",
+      "created_at": null
+    }
+  ]
+}

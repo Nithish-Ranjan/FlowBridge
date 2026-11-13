@@ -16,6 +16,18 @@ import type {
   SupplierDTO,
 } from '@flowbridge/shared';
 
+export type {
+  RetailerDTO,
+  RetailerPaymentIdentifierDTO,
+  CustomerInvoiceDTO,
+  PaymentTransactionDTO,
+  PaymentAllocationDTO,
+  SupplierDTO,
+  SupplierBillDTO,
+  OperatingExpenseDTO,
+  CommitmentDTO,
+};
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:4000/api/v1';
 
 export interface WorkspacePayload {
@@ -295,8 +307,24 @@ export const api = {
     }),
   createRetailer: (
     businessId: string,
-    body: { retailerCode: string; name: string; contactName?: string; creditTermsDays?: number },
-  ) => apiFetch(`/retailers?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+    body: {
+      retailerCode: string;
+      name: string;
+      contactName?: string;
+      phoneMasked?: string;
+      email?: string;
+      creditTermsDays?: number;
+      reliabilityScore?: number;
+      notes?: string;
+    },
+  ) => apiFetch<{ retailer: RetailerDTO }>(`/retailers?businessId=${businessId}`, { method: 'POST', body: JSON.stringify(body) }),
+  getRetailerPaymentHistory: (businessId: string, retailerId: string) =>
+    apiFetch<{
+      retailer: RetailerDTO;
+      payments: PaymentTransactionDTO[];
+      allocations: PaymentAllocationDTO[];
+      creditEvents: any[];
+    }>(`/retailers/${retailerId}/payment-history?businessId=${businessId}`),
   registerIdentifier: (
     businessId: string,
     retailerId: string,

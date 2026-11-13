@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fsSync from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,7 +7,16 @@ import { checkDatabaseHealth, closePool, getPool } from './pool.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const MIGRATIONS_DIR = path.join(__dirname, 'migrations');
+
+function getMigrationsDir(): string {
+  const candidates = [
+    path.join(__dirname, 'migrations'),
+    path.resolve(__dirname, '../../src/db/migrations'),
+    path.resolve(process.cwd(), 'src/db/migrations'),
+    path.resolve(process.cwd(), 'backend/src/db/migrations'),
+  ];
+  return candidates.find((dir) => fsSync.existsSync(dir)) || path.join(__dirname, 'migrations');
+}
 
 export interface MigrationResult {
   applied: string[];
@@ -14,11 +24,12 @@ export interface MigrationResult {
 }
 
 export async function runMigrations(): Promise<MigrationResult> {
-  const pool = getPool();
   const health = await checkDatabaseHealth();
   if (!health.ok) {
     throw new Error('PostgreSQL startup health check failed.');
   }
+  const pool = getPool();
+  const MIGRATIONS_DIR = getMigrationsDir();
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -63,7 +74,13 @@ export async function runMigrations(): Promise<MigrationResult> {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query(sql);
+      let executableSql = sql;
+      if (health.serverVersion.includes('pg-mem')) {
+        executableSql = sql
+          .replace(/CREATE OR REPLACE FUNCTION[\s\S]*?LANGUAGE plpgsql;/gi, '')
+          .replace(/CREATE TRIGGER[\s\S]*?;/gi, '');
+      }
+      await client.query(executableSql);
       await client.query(
         'INSERT INTO schema_migrations (version, filename, checksum_sha256) VALUES ($1, $2, $3)',
         [version, filename, checksum],

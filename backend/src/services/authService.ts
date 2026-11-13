@@ -210,26 +210,42 @@ export async function updateUserLanguagePreference(userId: string, lang: 'en' | 
 }
 
 /**
- * Ensures demo user exists for the seeded demo business.
+ * Ensures demo users exist for the seeded demo business.
  */
 export async function ensureDemoUser(businessId: string): Promise<void> {
   const pool = getPool();
-  const demoEmail = 'owner@flowbridge.local';
-  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [demoEmail]);
-  if (existing.rows.length > 0) return;
+  const demoAccounts = [
+    {
+      email: 'owner@flowbridge.local',
+      password: 'FlowBridge123!',
+      fullName: 'Rajesh Sharma (Demo Owner)',
+      role: 'OWNER',
+    },
+    {
+      email: 'demo@flowbridge.fintech',
+      password: 'Demo@FlowBridge2026',
+      fullName: 'Rajesh Sharma (Distributor Hub)',
+      role: 'OWNER',
+    },
+  ];
 
-  const passwordHash = hashPassword('FlowBridge123!');
-  await pool.query(
-    `INSERT INTO users (business_id, email, password_hash, full_name, role, language_preference)
-     VALUES ($1, $2, $3, 'Demo Distributor Owner', 'OWNER', 'en')`,
-    [businessId, demoEmail, passwordHash],
-  );
+  for (const acc of demoAccounts) {
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [acc.email]);
+    if (existing.rows.length === 0) {
+      const passwordHash = hashPassword(acc.password);
+      await pool.query(
+        `INSERT INTO users (business_id, email, password_hash, full_name, role, language_preference)
+         VALUES ($1, $2, $3, $4, $5, 'en')`,
+        [businessId, acc.email, passwordHash, acc.fullName, acc.role],
+      );
+    }
+  }
 
-  // Also ensure demo emergency reserve
+  // Also ensure demo emergency reserve (₹30,000 current, ₹1,00,000 target)
   await pool.query(
     `INSERT INTO reserve_allocations (
       business_id, target_reserve_paise, current_reserve_paise, minimum_threshold_paise, status
-    ) VALUES ($1, 5000000, 5000000, 1500000, 'ACTIVE')
+    ) VALUES ($1, 10000000, 3000000, 1500000, 'ACTIVE')
     ON CONFLICT (business_id) DO NOTHING`,
     [businessId],
   );

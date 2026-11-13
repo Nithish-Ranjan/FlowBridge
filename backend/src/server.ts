@@ -1,5 +1,6 @@
 import { getEnv } from './config/env.js';
 import { checkDatabaseHealth, closePool } from './db/pool.js';
+import { seedDemoData } from './db/seed.js';
 import { createApp } from './app.js';
 
 async function startServer(): Promise<void> {
@@ -8,6 +9,9 @@ async function startServer(): Promise<void> {
   if (!dbHealth.ok) {
     throw new Error('PostgreSQL startup health check failed.');
   }
+
+  // Ensure database migrations and demo workspace are prepared
+  await seedDemoData(false);
 
   const app = createApp();
   const server = app.listen(env.PORT, () => {

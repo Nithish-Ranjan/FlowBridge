@@ -19,12 +19,17 @@ import { SmartExitModal } from './components/SmartExitModal';
 import { AuthView } from './components/AuthView';
 import { LandingPage } from './components/LandingPage';
 import { OnboardingModal } from './components/OnboardingModal';
+import { DashboardView } from './components/DashboardView';
+import { WhatIfControlRoom } from './components/WhatIfControlRoom';
+import { RetailersView } from './components/RetailersView';
 
 type PageKey =
   | 'overview'
+  | 'what-if'
   | 'forecast'
   | 'resolve'
   | 'reserve'
+  | 'retailers'
   | 'agreements'
   | 'negotiations'
   | 'risk'
@@ -44,14 +49,16 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // Overview
+  // Overview & Intelligence
   { key: 'overview', label: 'Dashboard', icon: '⬡', section: 'Overview' },
+  { key: 'what-if', label: 'What-If Control Room', icon: '🎛️', section: 'Overview' },
   { key: 'reports', label: 'Daily Financial Plan', icon: '🎙️', section: 'Overview' },
   // Financial Management
   { key: 'forecast', label: 'Cash Forecast', icon: '📈', section: 'Financial Management' },
   { key: 'resolve', label: 'Resolution Autopilot', icon: '🧩', section: 'Financial Management' },
   { key: 'reserve', label: 'Emergency Reserve', icon: '🛡️', section: 'Financial Management' },
   // Business Operations
+  { key: 'retailers', label: 'Retailer Management', icon: '🏪', section: 'Business Operations' },
   { key: 'agreements', label: 'Credit Agreements', icon: '📜', section: 'Business Operations' },
   { key: 'negotiations', label: 'Payment Negotiations', icon: '💬', section: 'Business Operations' },
   { key: 'risk', label: 'Retailer Risk Radar', icon: '🎯', section: 'Business Operations' },
@@ -75,6 +82,7 @@ export function App() {
   const [horizonDays, setHorizonDays] = useState<number>(15);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [activePage, setActivePage] = useState<PageKey>('overview');
+  const [targetContactForChat, setTargetContactForChat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [busy, setBusy] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -475,12 +483,37 @@ export function App() {
         {!loading && dashboard && (
           <>
             {activePage === 'overview' && (
-              <OverviewPage
-                dashboard={dashboard}
-                busy={busy}
-                onNavigate={setActivePage}
-                onRefresh={() => void loadBusinessesAndDashboard()}
-              />
+              <div className="page-body">
+                <DashboardView
+                  dashboard={dashboard}
+                  busy={busy}
+                  onNavigate={setActivePage}
+                  onRefresh={() => void loadBusinessesAndDashboard()}
+                />
+              </div>
+            )}
+            {activePage === 'what-if' && (
+              <div className="page-body">
+                <WhatIfControlRoom
+                  workspace={dashboard.workspace}
+                  horizonDays={horizonDays}
+                  onJumpToResolve={() => setActivePage('resolve')}
+                />
+              </div>
+            )}
+            {activePage === 'retailers' && (
+              <div className="page-body">
+                <RetailersView
+                  workspace={dashboard.workspace}
+                  businessId={dashboard.workspace.business.id}
+                  busy={busy}
+                  onRefreshWorkspace={() => void loadBusinessesAndDashboard()}
+                  onNavigateToCommunications={(retId) => {
+                    setTargetContactForChat(retId);
+                    setActivePage('communications');
+                  }}
+                />
+              </div>
             )}
             {activePage === 'reports' && (
               <div className="page-body">
@@ -676,7 +709,11 @@ export function App() {
             )}
             {activePage === 'communications' && (
               <div className="page-body">
-                <CommunicationsView workspace={dashboard.workspace} businessId={dashboard.workspace.business.id} />
+                <CommunicationsView
+                  workspace={dashboard.workspace}
+                  businessId={dashboard.workspace.business.id}
+                  initialContactId={targetContactForChat}
+                />
               </div>
             )}
             {activePage === 'automation' && (

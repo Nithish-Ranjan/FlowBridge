@@ -45,21 +45,29 @@ authRouter.post(
   '/demo-login',
   asyncHandler(async (_req, res) => {
     // Convenience endpoint for demo/evaluation
-    const demoEmail = 'owner@flowbridge.local';
-    const demoPassword = 'FlowBridge123!';
-    try {
-      const result = await loginUser({ email: demoEmail, password: demoPassword });
-      res.json(result);
-    } catch {
-      // Fallback: register demo user if not yet seeded
-      const result = await registerUser({
-        email: demoEmail,
-        password: demoPassword,
-        fullName: 'Demo Distributor Owner',
-        businessName: 'Deccan FMCG Distributors',
-      });
-      res.json(result);
+    const demoAccounts = [
+      { email: 'demo@flowbridge.fintech', password: 'Demo@FlowBridge2026' },
+      { email: 'owner@flowbridge.local', password: 'FlowBridge123!' },
+    ];
+
+    for (const cred of demoAccounts) {
+      try {
+        const result = await loginUser(cred);
+        res.json(result);
+        return;
+      } catch {
+        // try next
+      }
     }
+
+    // Fallback: register demo user if not yet seeded
+    const result = await registerUser({
+      email: 'demo@flowbridge.fintech',
+      password: 'Demo@FlowBridge2026',
+      fullName: 'Rajesh Sharma (Demo Owner)',
+      businessName: 'Sharma Distribution Hub',
+    });
+    res.json(result);
   }),
 );
 

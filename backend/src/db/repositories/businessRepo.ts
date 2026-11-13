@@ -34,15 +34,19 @@ interface SupplierRow {
 }
 
 function mapBusiness(row: BusinessRow): BusinessDTO {
+  const openingDateStr =
+    (row.opening_cash_date as unknown) instanceof Date
+      ? (row.opening_cash_date as unknown as Date).toISOString().slice(0, 10)
+      : String(row.opening_cash_date);
   return {
     id: row.id,
     code: row.code,
     name: row.name,
     currency: row.currency,
     timezone: row.timezone,
-    openingCashPaise: row.opening_cash_paise,
-    openingCashDate: row.opening_cash_date,
-    minimumCashPaise: row.minimum_cash_paise,
+    openingCashPaise: String(row.opening_cash_paise),
+    openingCashDate: openingDateStr,
+    minimumCashPaise: String(row.minimum_cash_paise),
     allocationPolicy: row.allocation_policy,
     approvalLimits: row.approval_limits_json,
     createdAt: row.created_at.toISOString(),

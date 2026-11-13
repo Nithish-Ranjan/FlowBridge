@@ -7,10 +7,16 @@ export type IsoDate = string;
 
 const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-function parseParts(iso: string): { year: number; month: number; day: number } {
-  const match = ISO_DATE_RE.exec(iso.trim());
+function parseParts(iso: string | Date | unknown): { year: number; month: number; day: number } {
+  const str =
+    iso instanceof Date
+      ? iso.toISOString().slice(0, 10)
+      : typeof iso === 'string'
+        ? iso.trim()
+        : String(iso ?? '').trim();
+  const match = ISO_DATE_RE.exec(str);
   if (!match) {
-    throw new Error(`Invalid ISO date (expected YYYY-MM-DD): "${iso}"`);
+    throw new Error(`Invalid ISO date (expected YYYY-MM-DD): "${String(iso)}"`);
   }
   const year = Number(match[1]);
   const month = Number(match[2]);

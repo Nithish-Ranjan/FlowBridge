@@ -8,6 +8,13 @@ import type {
 import { parsePaise, paiseToString } from '@flowbridge/shared';
 import { query } from '../pool.js';
 
+function toIsoDateString(val: string | Date | unknown): string {
+  if (val instanceof Date) {
+    return val.toISOString().slice(0, 10);
+  }
+  return String(val ?? '');
+}
+
 interface InvoiceRow {
   id: string;
   business_id: string;
@@ -74,10 +81,10 @@ function mapInvoice(row: InvoiceRow): CustomerInvoiceDTO {
     retailerCode: row.retailer_code,
     retailerName: row.retailer_name,
     invoiceNumber: row.invoice_number,
-    invoiceDate: row.invoice_date,
-    dueDate: row.due_date,
-    totalAmountPaise: row.total_amount_paise,
-    paidAmountPaise: row.paid_amount_paise,
+    invoiceDate: toIsoDateString(row.invoice_date),
+    dueDate: toIsoDateString(row.due_date),
+    totalAmountPaise: String(row.total_amount_paise),
+    paidAmountPaise: String(row.paid_amount_paise),
     outstandingPaise: paiseToString(outstanding),
     status: row.status,
     evidenceStatus: row.evidence_status,
@@ -98,10 +105,10 @@ function mapBill(row: BillRow): SupplierBillDTO {
     supplierCode: row.supplier_code,
     supplierName: row.supplier_name,
     billNumber: row.bill_number,
-    issueDate: row.issue_date,
-    dueDate: row.due_date,
-    totalAmountPaise: row.total_amount_paise,
-    paidAmountPaise: row.paid_amount_paise,
+    issueDate: toIsoDateString(row.issue_date),
+    dueDate: toIsoDateString(row.due_date),
+    totalAmountPaise: String(row.total_amount_paise),
+    paidAmountPaise: String(row.paid_amount_paise),
     outstandingPaise: paiseToString(outstanding),
     status: row.status,
     evidenceStatus: row.evidence_status,
@@ -121,9 +128,9 @@ function mapExpense(row: ExpenseRow): OperatingExpenseDTO {
     expenseCode: row.expense_code,
     category: row.category,
     description: row.description,
-    dueDate: row.due_date,
-    amountPaise: row.amount_paise,
-    paidAmountPaise: row.paid_amount_paise,
+    dueDate: toIsoDateString(row.due_date),
+    amountPaise: String(row.amount_paise),
+    paidAmountPaise: String(row.paid_amount_paise),
     outstandingPaise: paiseToString(outstanding),
     status: row.status,
     priorityTier: row.priority_tier,
