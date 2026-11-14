@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { addDays, formatINR, parsePaise, type BusinessDTO, type ResolutionPlan } from '@flowbridge/shared';
+import {
+  addDays,
+  formatINR,
+  parsePaise,
+  type BusinessDTO,
+  type ResolutionPlan,
+  type ScenarioActionInput,
+} from '@flowbridge/shared';
 import { api, getStoredSessionToken, setStoredSessionToken, type DashboardResponse } from './api/client';
 import { ForecastView } from './components/ForecastView';
 import { ResolveView } from './components/ResolveView';
@@ -21,6 +28,16 @@ import { OnboardingModal } from './components/OnboardingModal';
 import { DashboardView } from './components/DashboardView';
 import { WhatIfControlRoom } from './components/WhatIfControlRoom';
 import { RetailersView } from './components/RetailersView';
+
+export interface TransferredScenario {
+  title: string;
+  subtitle?: string;
+  source: 'RESOLUTION_AUTOPILOT' | 'PRESET' | 'NATURAL_LANGUAGE' | 'CUSTOM';
+  actions: ScenarioActionInput[];
+  planId?: string;
+  notes?: string;
+  expectedOutcome?: string;
+}
 
 type PageKey =
   | 'overview'
@@ -80,6 +97,7 @@ export function App() {
   const [horizonDays, setHorizonDays] = useState<number>(15);
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [activePage, setActivePage] = useState<PageKey>('overview');
+  const [transferredScenario, setTransferredScenario] = useState<TransferredScenario | null>(null);
   const [targetContactForChat, setTargetContactForChat] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [busy, setBusy] = useState<boolean>(false);
@@ -465,7 +483,18 @@ export function App() {
                 <WhatIfControlRoom
                   workspace={dashboard.workspace}
                   horizonDays={horizonDays}
+                  initialScenario={transferredScenario}
+                  onClearInitialScenario={() => setTransferredScenario(null)}
                   onJumpToResolve={() => setActivePage('resolve')}
+                  onEvaluateScenario={async (actions) => {
+                    const res = await api.evaluateScenario(dashboard.workspace.business.id, horizonDays, actions);
+                    return res.forecast;
+                  }}
+                  onSaveScenario={(name, scenarioKind, actions) =>
+                    runAction(`Saved isolated what-if scenario "${name}".`, async () => {
+                      await api.saveScenario(dashboard.workspace.business.id, { name, scenarioKind, horizonDays, actions });
+                    })
+                  }
                 />
               </div>
             )}
@@ -525,6 +554,10 @@ export function App() {
                     })
                   }
                   onProposePlan={handleProposePlan}
+                  onSimulateInWhatIf={(scenario) => {
+                    setTransferredScenario(scenario);
+                    setActivePage('what-if');
+                  }}
                 />
               </div>
             )}

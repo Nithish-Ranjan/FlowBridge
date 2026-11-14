@@ -1,40 +1,44 @@
 :root {
-  /* Warm off-white, dark charcoal, restrained terracotta fintech palette */
-  --bg: #FAF9F6;
+  /* Restored FlowBridge Blue Fintech Identity */
+  --bg: #F4F7FC;
   --surface: #FFFFFF;
-  --surface-alt: #F5F4F0;
+  --surface-alt: #F8FAFC;
   --surface-raised: #FFFFFF;
-  --border: #E7E5E4;
-  --border-subtle: #F0EFEB;
-  --border-focus: #C84B31;
+  --border: #E2E8F0;
+  --border-subtle: #EDF2F7;
+  --border-focus: #2563EB;
   
-  --text: #1C1917;
-  --text-muted: #57534E;
-  --text-light: #78716C;
+  --text: #172B4D;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
 
-  --primary: #C84B31;
-  --primary-hover: #B03E26;
-  --primary-soft: #FDF4F2;
-  --primary-border: #F5CAC1;
+  --primary: #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-soft: #EFF6FF;
+  --primary-border: #BFDBFE;
+  --primary-dark: #0B1426;
 
-  --terracotta: #C84B31;
-  --terracotta-soft: #FDF4F2;
-  --terracotta-border: #F5CAC1;
+  --secondary: #60A5FA;
+  --secondary-soft: #F0F7FF;
 
-  --secondary: #0D9488;
-  --secondary-soft: #F0FDFA;
+  --terracotta: #2563EB;
+  --terracotta-soft: #EFF6FF;
+  --terracotta-border: #BFDBFE;
+
+  --secondary: #60A5FA;
+  --secondary-soft: #EFF6FF;
   --teal: #0D9488;
   --teal-soft: #F0FDFA;
 
-  --green: #15803D;
+  --green: #16A34A;
   --green-soft: #F0FDF4;
   --green-border: #BBF7D0;
 
-  --amber: #D97706;
+  --amber: #F59E0B;
   --amber-soft: #FFFBEB;
   --amber-border: #FDE68A;
 
-  --rose: #DC2626;
+  --rose: #E5484D;
   --rose-soft: #FEF2F2;
   --rose-border: #FECACA;
 

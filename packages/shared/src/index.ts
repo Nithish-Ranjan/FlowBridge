@@ -6,3 +6,4 @@ export * from './forecast.js';
 export * from './resolution.js';
 export * from './verification.js';
 export * from './chart.js';
+export * from './scenarioIntent.js';
