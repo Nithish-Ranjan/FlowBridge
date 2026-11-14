@@ -181,6 +181,22 @@ describe('Environment, Security Middleware & /api/v1 Boundary Validation', () =>
     expect(res.body.error?.code).toBe('INVALID_ID');
   });
 
+  it('rejects empty scenario evaluation requests on /api/v1/scenarios/evaluate', async () => {
+    const app = createApp();
+    // Empty actions array rejected at Zod boundary
+    const resEmpty = await dispatchJson(
+      app,
+      'POST',
+      '/api/v1/scenarios/evaluate?businessId=00000000-0000-0000-0000-000000000001',
+      {
+        horizonDays: 15,
+        actions: [],
+      },
+    );
+    expect(resEmpty.status).toBe(400);
+    expect(resEmpty.body.error?.code).toBe('VALIDATION_ERROR');
+  });
+
   it('validates Zod schemas for imports, allocations, scenarios, and commitments', () => {
     expect(() =>
       ImportBankTransactionsSchema.parse({ filename: 'empty.csv' }),

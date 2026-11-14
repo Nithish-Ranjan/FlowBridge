@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { validateScenarioActions } from '@flowbridge/shared';
 import { updateBusinessSettings } from '../../db/repositories/businessRepo.js';
 import {
   getForecastSnapshotById,
@@ -9,6 +10,7 @@ import {
 import { recordAuditEvent } from '../../db/repositories/paymentRepo.js';
 import {
   getForecastByRange,
+  loadBusinessWorkspace,
   recalculateAndSaveSnapshot,
   runBoundedResolutionSearch,
   runForecast,
@@ -119,6 +121,23 @@ export function createForecastResolutionRouter(): Router {
     asyncHandler(async (req, res) => {
       const businessId = await resolveBusinessId(req);
       const body = EvaluateScenarioSchema.parse(req.body);
+
+      // Validate actions against live business records, amounts, and limits
+      const ws = await loadBusinessWorkspace(businessId);
+      const asOfDate = body.asOfDate ?? ws.business.openingCashDate;
+      const validation = validateScenarioActions(body.actions, {
+        invoices: ws.invoices,
+        bills: ws.bills,
+        expenses: ws.expenses,
+        asOfDate,
+        horizonDays: body.horizonDays,
+        limits: ws.business.approvalLimits,
+      });
+
+      if (!validation.valid) {
+        throw new HttpError(400, 'INVALID_SCENARIO_ACTIONS', validation.error || 'Invalid scenario actions.');
+      }
+
       const forecast = await runForecast(businessId, {
         asOfDate: body.asOfDate,
         horizonDays: body.horizonDays,

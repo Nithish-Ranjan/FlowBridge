@@ -259,8 +259,11 @@ export function computeCashForecast(input: ForecastInput): ForecastResult {
   }
 
   // 5. Overlay isolated Scenario / What-If Actions (purely in-memory, never mutating source records)
+  const scenarioGeneratedItems: InternalItem[] = [];
+
   for (const action of input.scenarioActions ?? []) {
     const amt = parsePaise(action.amountPaise);
+    if (amt <= 0n) continue;
     const simDate = parseIsoDate(action.simulatedDate);
 
     if (action.actionType === 'ACCELERATE_INFLOW' || action.actionType === 'DELAY_INFLOW') {
@@ -268,13 +271,18 @@ export function computeCashForecast(input: ForecastInput): ForecastResult {
       let toShift = amt;
       for (const item of items) {
         if (toShift <= 0n) break;
-        if (item.direction === 'INFLOW' && item.sourceId === action.targetId && item.amountPaise > 0n) {
+        if (
+          item.sourceType !== 'SCENARIO_ACTION' &&
+          item.direction === 'INFLOW' &&
+          item.sourceId === action.targetId &&
+          item.amountPaise > 0n
+        ) {
           const moved = item.amountPaise < toShift ? item.amountPaise : toShift;
           item.amountPaise -= moved;
           toShift -= moved;
-          items.push({
+          scenarioGeneratedItems.push({
             sourceType: 'SCENARIO_ACTION',
-            sourceId: action.id ?? action.targetId ?? 'scenario',
+            sourceId: action.id ?? `scenario-${action.targetId}-${action.actionType}`,
             referenceCode: item.referenceCode,
             counterpartyName: item.counterpartyName,
             direction: 'INFLOW',
@@ -290,13 +298,18 @@ export function computeCashForecast(input: ForecastInput): ForecastResult {
       let toDefer = amt;
       for (const item of items) {
         if (toDefer <= 0n) break;
-        if (item.direction === 'OUTFLOW' && item.sourceId === action.targetId && item.amountPaise > 0n) {
+        if (
+          item.sourceType !== 'SCENARIO_ACTION' &&
+          item.direction === 'OUTFLOW' &&
+          item.sourceId === action.targetId &&
+          item.amountPaise > 0n
+        ) {
           const moved = item.amountPaise < toDefer ? item.amountPaise : toDefer;
           item.amountPaise -= moved;
           toDefer -= moved;
-          items.push({
+          scenarioGeneratedItems.push({
             sourceType: 'SCENARIO_ACTION',
-            sourceId: action.id ?? action.targetId ?? 'scenario',
+            sourceId: action.id ?? `scenario-${action.targetId}-${action.actionType}`,
             referenceCode: item.referenceCode,
             counterpartyName: item.counterpartyName,
             direction: 'OUTFLOW',
@@ -309,15 +322,22 @@ export function computeCashForecast(input: ForecastInput): ForecastResult {
         }
       }
     } else if (action.actionType === 'DROP_INFLOW_PCT') {
-      // `amt` holds percentage (0..100) or drop amount
+      // `amt` holds percentage (0..100). Applies to expected receivables, preserving actual bank transactions.
+      const pct = amt > 100n ? 100n : amt < 0n ? 0n : amt;
       for (const item of items) {
-        if (item.direction === 'INFLOW' && (action.targetId === null || item.sourceId === action.targetId)) {
-          const drop = amt <= 100n ? (item.amountPaise * amt) / 100n : (item.amountPaise < amt ? item.amountPaise : amt);
-          item.amountPaise -= drop;
+        if (
+          item.direction === 'INFLOW' &&
+          item.classification !== 'ACTUAL' &&
+          (action.targetId === null || item.sourceId === action.targetId)
+        ) {
+          const drop = (item.amountPaise * pct) / 100n;
+          item.amountPaise = item.amountPaise > drop ? item.amountPaise - drop : 0n;
         }
       }
     }
   }
+
+  items.push(...scenarioGeneratedItems);
 
   // Bucket active items by calendar day within [asOfDate .. horizonEnd]
   const calendar = dateRange(asOfDate, horizonDays);

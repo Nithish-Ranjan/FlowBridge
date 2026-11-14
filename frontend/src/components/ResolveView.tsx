@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   addDays,
+  compareIsoDate,
   formatINR,
+  parsePaise,
+  paiseToString,
+  validateScenarioActions,
   type ApprovalLimits,
   type ForecastResult,
   type ResolutionPlan,
@@ -22,6 +26,11 @@ interface ResolveViewProps {
   busy: boolean;
 }
 
+interface PresetGenerationResult {
+  actions: ScenarioActionInput[];
+  explanation?: string;
+}
+
 export function ResolveView({
   workspace,
   resolution,
@@ -39,80 +48,263 @@ export function ResolveView({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const isBusy = busy || evaluating;
+  const latestRequestIdRef = useRef<number>(0);
 
-  async function runPreset(label: string, actions: ScenarioActionInput[]) {
-    setEvaluating(true);
+  /**
+   * Evaluates a scenario with strict state hygiene:
+   * - Immediately clears old forecast and stale errors so outdated charts are never displayed
+   * - Uses a request ID counter to prevent out-of-order race conditions
+   * - Validates actions against business records and limits prior to submission
+   * - Handles API errors gracefully and restores UI
+   */
+  async function runScenario(label: string, actions: ScenarioActionInput[]) {
+    if (isBusy) return;
+
+    if (!actions || actions.length === 0) {
+      setLocalError(`Cannot evaluate scenario "${label}": No valid actions could be generated from current records.`);
+      setScenarioForecast(null);
+      return;
+    }
+
+    const validation = validateScenarioActions(actions, {
+      invoices: workspace.invoices,
+      bills: workspace.bills,
+      expenses: workspace.expenses,
+      asOfDate: workspace.business.openingCashDate,
+      limits,
+    });
+
+    if (!validation.valid) {
+      setLocalError(`Invalid scenario "${label}": ${validation.error}`);
+      setScenarioForecast(null);
+      return;
+    }
+
+    // 1. Clear previous scenario state immediately
+    setScenarioForecast(null);
     setLocalError(null);
     setScenarioLabel(label);
     setActiveActions(actions);
+    setEvaluating(true);
+
+    const currentReqId = ++latestRequestIdRef.current;
+
     try {
       const res = await onEvaluateScenario(actions);
-      setScenarioForecast(res);
-    } catch (err) {
-      setLocalError((err as Error).message);
+      if (currentReqId === latestRequestIdRef.current) {
+        setScenarioForecast(res);
+      }
+    } catch (err: any) {
+      if (currentReqId === latestRequestIdRef.current) {
+        setLocalError(err.message || 'Failed to evaluate scenario forecast.');
+        setScenarioForecast(null);
+      }
     } finally {
-      setEvaluating(false);
+      if (currentReqId === latestRequestIdRef.current) {
+        setEvaluating(false);
+      }
     }
   }
 
-  function buildBlueprintPlanAActions(): ScenarioActionInput[] {
+  /**
+   * Preset 1: Dynamically generated from loaded business records and resolution candidates.
+   * Leverages real open invoices and bills respecting approved limits and outstanding balances.
+   */
+  function buildBalancedResolutionPlanActions(): PresetGenerationResult {
+    // If bounded resolution search discovered a feasible plan, leverage its verified candidate actions
+    if (resolution.feasiblePlans.length > 0 && resolution.feasiblePlans[0].actions.length > 0) {
+      const plan = resolution.feasiblePlans[0];
+      const actions = plan.actions.map((a) => a.scenarioAction);
+      return { actions };
+    }
+
     const day0 = workspace.business.openingCashDate;
-    const invA = workspace.invoices.find((i) => i.invoiceNumber === 'C-3301');
-    const billA = workspace.bills.find((b) => b.billNumber === 'S-2041');
+    const horizonEnd = addDays(day0, 15);
+    const breachDate = resolution.baselineForecast.breach.firstBreachDate;
     const actions: ScenarioActionInput[] = [];
-    if (invA) {
-      actions.push({
-        targetType: 'CUSTOMER_INVOICE',
-        targetId: invA.id,
-        targetLabel: `${invA.invoiceNumber} Early Receipt`,
-        actionType: 'ACCELERATE_INFLOW',
-        amountPaise: '2000000',
-        originalDate: invA.dueDate,
-        simulatedDate: addDays(day0, 4),
+
+    // 1. Pick largest eligible open customer invoice (due after Day 0 within horizon)
+    const eligibleInvoices = workspace.invoices
+      .filter((inv) => {
+        if (inv.status === 'PAID' || inv.status === 'CANCELLED' || inv.status === 'WRITTEN_OFF') return false;
+        const out = parsePaise(inv.outstandingPaise);
+        if (out <= 0n) return false;
+        return compareIsoDate(inv.dueDate, day0) > 0;
+      })
+      .sort((a, b) => {
+        const amtA = parsePaise(a.outstandingPaise);
+        const amtB = parsePaise(b.outstandingPaise);
+        return amtA > amtB ? -1 : amtA < amtB ? 1 : 0;
       });
-    }
-    if (billA) {
-      actions.push({
-        targetType: 'SUPPLIER_BILL',
-        targetId: billA.id,
-        targetLabel: `${billA.billNumber} Deferral`,
-        actionType: 'DEFER_OUTFLOW',
-        amountPaise: '2500000',
-        originalDate: billA.dueDate,
-        simulatedDate: addDays(day0, 12),
+
+    // 2. Pick primary eligible open supplier bill (due within horizon)
+    const eligibleBills = workspace.bills
+      .filter((b) => {
+        if (b.status === 'PAID' || b.status === 'CANCELLED') return false;
+        const out = parsePaise(b.outstandingPaise);
+        if (out <= 0n) return false;
+        return compareIsoDate(b.dueDate, day0) >= 0;
+      })
+      .sort((a, b) => {
+        const amtA = parsePaise(a.outstandingPaise);
+        const amtB = parsePaise(b.outstandingPaise);
+        return amtA > amtB ? -1 : amtA < amtB ? 1 : 0;
       });
+
+    const primaryInv = eligibleInvoices[0];
+    const primaryBill = eligibleBills[0];
+
+    if (primaryInv) {
+      const out = parsePaise(primaryInv.outstandingPaise);
+      const maxPct = BigInt(Math.max(1, Math.min(100, limits.maxEarlyRequestPct)));
+      const earlyAmt = (out * maxPct) / 100n;
+      const finalEarlyAmt = earlyAmt > 0n ? earlyAmt : out;
+
+      const targetEarlyDate =
+        breachDate && compareIsoDate(breachDate, day0) > 0
+          ? compareIsoDate(breachDate, primaryInv.dueDate) < 0
+            ? addDays(breachDate, -1)
+            : addDays(day0, 1)
+          : addDays(day0, Math.min(3, Math.max(1, limits.maxEarlyDays)));
+
+      const earlyDate =
+        compareIsoDate(targetEarlyDate, primaryInv.dueDate) < 0 ? targetEarlyDate : addDays(primaryInv.dueDate, -1);
+      const validEarlyDate = compareIsoDate(earlyDate, day0) >= 0 ? earlyDate : day0;
+
+      if (compareIsoDate(validEarlyDate, primaryInv.dueDate) < 0) {
+        actions.push({
+          id: `auto-accelerate-${primaryInv.id}`,
+          targetType: 'CUSTOMER_INVOICE',
+          targetId: primaryInv.id,
+          targetLabel: `${primaryInv.invoiceNumber} Early Receipt (${primaryInv.retailerName ?? 'Customer'})`,
+          actionType: 'ACCELERATE_INFLOW',
+          amountPaise: paiseToString(finalEarlyAmt),
+          originalDate: primaryInv.dueDate,
+          simulatedDate: validEarlyDate,
+        });
+      }
     }
-    return actions;
+
+    if (primaryBill) {
+      const out = parsePaise(primaryBill.outstandingPaise);
+      const maxDeferPct = BigInt(Math.max(1, Math.min(100, limits.defaultMaxSupplierDeferralPct)));
+      const deferAmt = (out * maxDeferPct) / 100n;
+      const finalDeferAmt = deferAmt > 0n ? deferAmt : out;
+
+      const deferDays = Math.max(1, Math.min(14, limits.defaultMaxSupplierDeferralDays));
+      const targetDeferDate = addDays(primaryBill.dueDate, deferDays);
+      const finalDeferDate = compareIsoDate(targetDeferDate, horizonEnd) <= 0 ? targetDeferDate : horizonEnd;
+
+      if (compareIsoDate(finalDeferDate, primaryBill.dueDate) > 0) {
+        actions.push({
+          id: `auto-defer-${primaryBill.id}`,
+          targetType: 'SUPPLIER_BILL',
+          targetId: primaryBill.id,
+          targetLabel: `${primaryBill.billNumber} Deferral (${primaryBill.supplierName ?? 'Supplier'})`,
+          actionType: 'DEFER_OUTFLOW',
+          amountPaise: paiseToString(finalDeferAmt),
+          originalDate: primaryBill.dueDate,
+          simulatedDate: finalDeferDate,
+        });
+      }
+    }
+
+    if (actions.length === 0) {
+      return {
+        actions: [],
+        explanation: 'No open, eligible customer invoices or supplier bills found in current business records to generate a balanced resolution plan.',
+      };
+    }
+
+    return { actions };
   }
 
-  function buildCustomerBDelayShock(): ScenarioActionInput[] {
-    const invB = workspace.invoices.find((i) => i.invoiceNumber === 'C-3307');
-    if (!invB) return [];
-    return [
-      {
-        targetType: 'CUSTOMER_INVOICE',
-        targetId: invB.id,
-        targetLabel: `${invB.invoiceNumber} Delayed 5 Days`,
-        actionType: 'DELAY_INFLOW',
-        amountPaise: invB.outstandingPaise,
-        originalDate: invB.dueDate,
-        simulatedDate: addDays(invB.dueDate, 5),
-      },
-    ];
+  /**
+   * Preset 2: Dynamically finds the largest open customer receivable to stress-test payment delay.
+   */
+  function buildCustomerDelayShockActions(): PresetGenerationResult {
+    const day0 = workspace.business.openingCashDate;
+    const eligibleInvoices = workspace.invoices
+      .filter((inv) => {
+        if (inv.status === 'PAID' || inv.status === 'CANCELLED' || inv.status === 'WRITTEN_OFF') return false;
+        const out = parsePaise(inv.outstandingPaise);
+        if (out <= 0n) return false;
+        return compareIsoDate(inv.dueDate, day0) >= 0;
+      })
+      .sort((a, b) => {
+        const amtA = parsePaise(a.outstandingPaise);
+        const amtB = parsePaise(b.outstandingPaise);
+        return amtA > amtB ? -1 : amtA < amtB ? 1 : a.dueDate.localeCompare(b.dueDate);
+      });
+
+    const topInv = eligibleInvoices[0];
+    if (!topInv) {
+      return {
+        actions: [],
+        explanation: 'No open customer invoices available in current business records to simulate a customer payment delay.',
+      };
+    }
+
+    return {
+      actions: [
+        {
+          id: `shock-delay-${topInv.id}`,
+          targetType: 'CUSTOMER_INVOICE',
+          targetId: topInv.id,
+          targetLabel: `${topInv.invoiceNumber} (${topInv.retailerName ?? 'Customer'}) Delayed 5 Days`,
+          actionType: 'DELAY_INFLOW',
+          amountPaise: topInv.outstandingPaise,
+          originalDate: topInv.dueDate,
+          simulatedDate: addDays(topInv.dueDate, 5),
+        },
+      ],
+    };
   }
 
-  function buildCollectionDropShock(): ScenarioActionInput[] {
-    return [
-      {
-        targetType: 'SYNTHETIC_ADJUSTMENT',
-        targetId: null,
-        targetLabel: '20% Collection Drop Shockwave',
-        actionType: 'DROP_INFLOW_PCT',
-        amountPaise: '20',
-        originalDate: null,
-        simulatedDate: workspace.business.openingCashDate,
-      },
-    ];
+  /**
+   * Preset 3: Simulates a 20% collection drop across uncollected customer receivables.
+   */
+  function buildCollectionDropShockActions(): PresetGenerationResult {
+    const day0 = workspace.business.openingCashDate;
+    const hasOpenReceivables = workspace.invoices.some(
+      (inv) =>
+        inv.status !== 'PAID' &&
+        inv.status !== 'CANCELLED' &&
+        inv.status !== 'WRITTEN_OFF' &&
+        parsePaise(inv.outstandingPaise) > 0n,
+    );
+
+    if (!hasOpenReceivables) {
+      return {
+        actions: [],
+        explanation: 'No open customer receivables exist in current business records to apply a market collection reduction shockwave.',
+      };
+    }
+
+    return {
+      actions: [
+        {
+          id: 'shock-drop-20pct',
+          targetType: 'SYNTHETIC_ADJUSTMENT',
+          targetId: null,
+          targetLabel: '20% Market Collection Drop Shockwave',
+          actionType: 'DROP_INFLOW_PCT',
+          amountPaise: '20',
+          originalDate: null,
+          simulatedDate: day0,
+        },
+      ],
+    };
+  }
+
+  function handleTriggerPreset(label: string, generator: () => PresetGenerationResult) {
+    const res = generator();
+    if (!res.actions || res.actions.length === 0) {
+      setLocalError(res.explanation || `No valid actions available for "${label}".`);
+      setScenarioForecast(null);
+      return;
+    }
+    runScenario(label, res.actions);
   }
 
   return (
@@ -123,6 +315,7 @@ export function ResolveView({
           <button className="btn btn-sm" onClick={() => setLocalError(null)}>✕</button>
         </div>
       )}
+
       {/* Distributor-Approved Limits & Liquidity Firewall */}
       <div className="card">
         <div className="card-header">
@@ -285,7 +478,7 @@ export function ResolveView({
                     className="btn"
                     disabled={isBusy}
                     onClick={() =>
-                      runPreset(
+                      runScenario(
                         `Preview: ${plan.label}`,
                         plan.actions.map((a) => a.scenarioAction),
                       )
@@ -323,21 +516,21 @@ export function ResolveView({
           <button
             className="btn"
             disabled={isBusy}
-            onClick={() => runPreset('Blueprint Plan A (Early ₹20k + Defer ₹25k)', buildBlueprintPlanAActions())}
+            onClick={() => handleTriggerPreset('Balanced Resolution Lever', buildBalancedResolutionPlanActions)}
           >
-            Run Blueprint Plan A (+₹15k Day 5)
+            Run Balanced Resolution Lever (Inflow + Deferral)
           </button>
           <button
             className="btn"
             disabled={isBusy}
-            onClick={() => runPreset('Shockwave: Customer B Delays 5 Days', buildCustomerBDelayShock())}
+            onClick={() => handleTriggerPreset('Shockwave: Customer Delay (+5 Days)', buildCustomerDelayShockActions)}
           >
-            Shockwave: Customer B Delays 5 Days
+            Shockwave: Customer Delay (+5 Days)
           </button>
           <button
             className="btn"
             disabled={isBusy}
-            onClick={() => runPreset('Shockwave: 20% Collection Drop', buildCollectionDropShock())}
+            onClick={() => handleTriggerPreset('Shockwave: 20% Collection Drop', buildCollectionDropShockActions)}
           >
             Shockwave: 20% Collection Drop
           </button>
@@ -351,6 +544,13 @@ export function ResolveView({
             </button>
           )}
         </div>
+
+        {/* Loading state indicator */}
+        {evaluating && (
+          <div className="banner banner-info" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>⏳ Evaluating scenario forecast: <strong>{scenarioLabel}</strong>...</span>
+          </div>
+        )}
 
         {scenarioForecast ? (
           <div>
@@ -369,11 +569,10 @@ export function ResolveView({
               comparisonLabel={scenarioLabel}
             />
           </div>
-        ) : (
+        ) : !evaluating ? (
           <p className="muted">Select a preset above or compare any feasible plan to overlay its cash curve without mutating actuals.</p>
-        )}
+        ) : null}
       </div>
     </div>
   );
 }
-

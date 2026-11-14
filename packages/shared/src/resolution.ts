@@ -523,3 +523,238 @@ export function searchBoundedResolutions(
     emergencySummary: `NO FEASIBLE PLAN WITHIN APPROVED LIMITS: Evaluated ${totalCombinationsEvaluated} combinations (${withinLimitsCombinationsCount} within policy limits). Residual minimum deficit is ${paiseToString(residualDeficit)} paise. Use Emergency Mode levers and Survival Mode priorities below.`,
   };
 }
+
+export interface ScenarioValidationContext {
+  invoices: import('./types.js').CustomerInvoiceDTO[];
+  bills: import('./types.js').SupplierBillDTO[];
+  expenses: import('./types.js').OperatingExpenseDTO[];
+  asOfDate: IsoDate;
+  horizonDays?: number;
+  limits?: ApprovalLimits;
+}
+
+export interface ScenarioValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+function isValidIsoDateString(val?: string | null): val is IsoDate {
+  if (!val || typeof val !== 'string' || !ISO_DATE_REGEX.test(val)) return false;
+  const d = new Date(val);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === val;
+}
+
+export function validateScenarioActionInput(
+  action: ScenarioActionInput,
+  context: ScenarioValidationContext,
+): ScenarioValidationResult {
+  if (!action) {
+    return { valid: false, error: 'Action definition is missing or null.' };
+  }
+
+  // 1. Action type & Target type correlation
+  if (action.actionType === 'ACCELERATE_INFLOW' || action.actionType === 'DELAY_INFLOW') {
+    if (action.targetType !== 'CUSTOMER_INVOICE') {
+      return {
+        valid: false,
+        error: `Action ${action.actionType} requires targetType CUSTOMER_INVOICE, received ${action.targetType}.`,
+      };
+    }
+  } else if (action.actionType === 'DEFER_OUTFLOW' || action.actionType === 'SPLIT_OUTFLOW') {
+    if (action.targetType !== 'SUPPLIER_BILL' && action.targetType !== 'OPERATING_EXPENSE') {
+      return {
+        valid: false,
+        error: `Action ${action.actionType} requires targetType SUPPLIER_BILL or OPERATING_EXPENSE, received ${action.targetType}.`,
+      };
+    }
+  } else if (action.actionType === 'DROP_INFLOW_PCT') {
+    if (action.targetType !== 'SYNTHETIC_ADJUSTMENT') {
+      return {
+        valid: false,
+        error: `Action DROP_INFLOW_PCT requires targetType SYNTHETIC_ADJUSTMENT, received ${action.targetType}.`,
+      };
+    }
+  }
+
+  // 2. Target existence, status & outstanding balance checks
+  if (action.targetType === 'CUSTOMER_INVOICE') {
+    if (!action.targetId) {
+      return { valid: false, error: 'Customer invoice action is missing targetId.' };
+    }
+    const inv = context.invoices.find((i) => i.id === action.targetId);
+    if (!inv) {
+      return { valid: false, error: `Customer invoice with ID "${action.targetId}" not found in current business records.` };
+    }
+    if (inv.status === 'PAID') {
+      return { valid: false, error: `Customer invoice ${inv.invoiceNumber} is PAID and cannot be accelerated.` };
+    }
+    if (inv.status === 'CANCELLED' || inv.status === 'WRITTEN_OFF') {
+      return { valid: false, error: `Invoice ${inv.invoiceNumber} is ${inv.status} and cannot be modified in a scenario.` };
+    }
+    const outstanding = parsePaise(inv.outstandingPaise);
+    if (outstanding <= 0n) {
+      return { valid: false, error: `Invoice ${inv.invoiceNumber} has zero outstanding balance.` };
+    }
+    const requestedAmt = parsePaise(action.amountPaise);
+    if (requestedAmt <= 0n) {
+      return { valid: false, error: `Action amount must be positive. Received ${action.amountPaise} paise.` };
+    }
+    if (requestedAmt > outstanding) {
+      return {
+        valid: false,
+        error: `Action amount (${action.amountPaise} paise) exceeds invoice outstanding balance (${inv.outstandingPaise} paise).`,
+      };
+    }
+    if (context.limits && typeof context.limits.maxEarlyRequestPct === 'number' && action.actionType === 'ACCELERATE_INFLOW') {
+      const maxAllowed = percentageOfPaise(outstanding, context.limits.maxEarlyRequestPct);
+      if (requestedAmt > maxAllowed) {
+        return {
+          valid: false,
+          error: `Accelerated amount exceeds approved limit of ${context.limits.maxEarlyRequestPct}% (max ${maxAllowed} paise, requested ${requestedAmt} paise).`,
+        };
+      }
+    }
+  } else if (action.targetType === 'SUPPLIER_BILL') {
+    if (!action.targetId) {
+      return { valid: false, error: 'Supplier bill action is missing targetId.' };
+    }
+    const bill = context.bills.find((b) => b.id === action.targetId);
+    if (!bill) {
+      return { valid: false, error: `Supplier bill with ID "${action.targetId}" not found in current business records.` };
+    }
+    if (bill.status === 'PAID') {
+      return { valid: false, error: `Supplier bill ${bill.billNumber} is PAID and cannot be deferred.` };
+    }
+    if (bill.status === 'CANCELLED') {
+      return { valid: false, error: `Supplier bill ${bill.billNumber} is CANCELLED and cannot be deferred.` };
+    }
+    const outstanding = parsePaise(bill.outstandingPaise);
+    if (outstanding <= 0n) {
+      return { valid: false, error: `Supplier bill ${bill.billNumber} has zero outstanding balance.` };
+    }
+    const requestedAmt = parsePaise(action.amountPaise);
+    if (requestedAmt <= 0n) {
+      return { valid: false, error: `Action amount must be positive. Received ${action.amountPaise} paise.` };
+    }
+    if (requestedAmt > outstanding) {
+      return {
+        valid: false,
+        error: `Deferral amount (${action.amountPaise} paise) exceeds bill outstanding balance (${bill.outstandingPaise} paise).`,
+      };
+    }
+    if (context.limits && typeof context.limits.defaultMaxSupplierDeferralPct === 'number' && action.actionType === 'DEFER_OUTFLOW') {
+      const maxAllowed = percentageOfPaise(outstanding, context.limits.defaultMaxSupplierDeferralPct);
+      if (requestedAmt > maxAllowed) {
+        return {
+          valid: false,
+          error: `Deferral amount exceeds approved limit of ${context.limits.defaultMaxSupplierDeferralPct}% (max ${maxAllowed} paise, requested ${requestedAmt} paise).`,
+        };
+      }
+    }
+  } else if (action.targetType === 'OPERATING_EXPENSE') {
+    if (!action.targetId) {
+      return { valid: false, error: 'Operating expense action is missing targetId.' };
+    }
+    const exp = context.expenses.find((e) => e.id === action.targetId);
+    if (!exp) {
+      return { valid: false, error: `Operating expense with ID "${action.targetId}" not found in current business records.` };
+    }
+    if (exp.status === 'PAID' || exp.status === 'CANCELLED') {
+      return { valid: false, error: `Operating expense ${exp.expenseCode} is ${exp.status} and cannot be deferred.` };
+    }
+    if (context.limits?.protectEssentialExpenses && (exp.isProtected || exp.priorityTier === 'ESSENTIAL')) {
+      return { valid: false, error: `Liquidity firewall protected: Essential expense ${exp.expenseCode} cannot be deferred.` };
+    }
+    const outstanding = parsePaise(exp.outstandingPaise);
+    if (outstanding <= 0n) {
+      return { valid: false, error: `Operating expense ${exp.expenseCode} has zero outstanding balance.` };
+    }
+    const requestedAmt = parsePaise(action.amountPaise);
+    if (requestedAmt <= 0n) {
+      return { valid: false, error: `Action amount must be positive. Received ${action.amountPaise} paise.` };
+    }
+    if (requestedAmt > outstanding) {
+      return {
+        valid: false,
+        error: `Deferral amount (${action.amountPaise} paise) exceeds expense outstanding balance (${exp.outstandingPaise} paise).`,
+      };
+    }
+  } else if (action.targetType === 'SYNTHETIC_ADJUSTMENT') {
+    const pct = Number(action.amountPaise);
+    if (Number.isNaN(pct) || pct < 0 || pct > 100) {
+      return {
+        valid: false,
+        error: `Collection drop percentage must be between 0 and 100. Received "${action.amountPaise}".`,
+      };
+    }
+  }
+
+  // 3. Date validity checks
+  if (!isValidIsoDateString(action.simulatedDate)) {
+    return { valid: false, error: `Simulated date "${action.simulatedDate}" is not a valid ISO date (YYYY-MM-DD).` };
+  }
+  if (action.originalDate !== null && !isValidIsoDateString(action.originalDate)) {
+    return { valid: false, error: `Original date "${action.originalDate}" is not a valid ISO date (YYYY-MM-DD).` };
+  }
+
+  if (action.actionType === 'ACCELERATE_INFLOW') {
+    if (!action.originalDate) {
+      return { valid: false, error: 'ACCELERATE_INFLOW action requires an originalDate.' };
+    }
+    if (compareIsoDate(action.simulatedDate, action.originalDate) >= 0) {
+      return {
+        valid: false,
+        error: `Simulated accelerated date (${action.simulatedDate}) must be strictly earlier than original due date (${action.originalDate}).`,
+      };
+    }
+    if (compareIsoDate(action.simulatedDate, context.asOfDate) < 0) {
+      return {
+        valid: false,
+        error: `Simulated accelerated date (${action.simulatedDate}) cannot be before the forecast start date (${context.asOfDate}).`,
+      };
+    }
+    if (context.limits && diffDays(action.simulatedDate, action.originalDate) > context.limits.maxEarlyDays) {
+      return {
+        valid: false,
+        error: `Early window (${diffDays(action.simulatedDate, action.originalDate)} days) exceeds approved maximum of ${context.limits.maxEarlyDays} days.`,
+      };
+    }
+  } else if (action.actionType === 'DELAY_INFLOW' || action.actionType === 'DEFER_OUTFLOW' || action.actionType === 'SPLIT_OUTFLOW') {
+    if (action.originalDate && compareIsoDate(action.simulatedDate, action.originalDate) <= 0) {
+      return {
+        valid: false,
+        error: `Simulated date (${action.simulatedDate}) must be strictly later than original date (${action.originalDate}) for ${action.actionType}.`,
+      };
+    }
+  }
+
+  if (context.horizonDays && context.horizonDays > 0) {
+    const horizonEnd = addDays(context.asOfDate, context.horizonDays);
+    if (action.actionType === 'ACCELERATE_INFLOW' && compareIsoDate(action.simulatedDate, horizonEnd) > 0) {
+      return {
+        valid: false,
+        error: `Simulated date (${action.simulatedDate}) is outside the active forecast horizon (${horizonEnd}).`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+export function validateScenarioActions(
+  actions: ScenarioActionInput[],
+  context: ScenarioValidationContext,
+): ScenarioValidationResult {
+  if (!actions || !Array.isArray(actions) || actions.length === 0) {
+    return { valid: false, error: 'At least one scenario action is required.' };
+  }
+  for (let i = 0; i < actions.length; i += 1) {
+    const res = validateScenarioActionInput(actions[i], context);
+    if (!res.valid) {
+      return { valid: false, error: `Action #${i + 1} (${actions[i].targetLabel ?? actions[i].actionType}): ${res.error}` };
+    }
+  }
+  return { valid: true };
+}
